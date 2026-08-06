@@ -6,6 +6,8 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatDate, parseQualifications } from "@/lib/utils";
 
+import { sendCertificateEmailAction } from "./actions";
+
 export const metadata = { title: "Certificados" };
 
 export default async function CertificatesPage(props: PageProps<"/eventos/[id]/certificados">) {
@@ -21,12 +23,18 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
 
   const qualification =
     typeof searchParams.qualificacao === "string" ? searchParams.qualificacao : "";
+  const success = typeof searchParams.ok === "string" ? searchParams.ok : "";
+  const error = typeof searchParams.erro === "string" ? searchParams.erro : "";
 
   const participants = await prisma.participant.findMany({
     where: { eventId: id, ...(qualification ? { qualification } : {}) },
     orderBy: { name: "asc" },
     include: {
-      certificates: true,
+      certificates: {
+        include: {
+          emails: { orderBy: { createdAt: "desc" }, take: 1 },
+        },
+      },
       _count: { select: { attendances: true } },
     },
   });
@@ -42,6 +50,9 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
 
   return (
     <div className="space-y-4">
+      {success ? <Alert tone="success">{success}</Alert> : null}
+      {error ? <Alert tone="danger">{error}</Alert> : null}
+
       <Alert tone="info">
         {event.minAttendanceDays > 0
           ? `Este evento exige presença em pelo menos ${event.minAttendanceDays} ${
@@ -88,12 +99,14 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
               <th>Qualificação</th>
               <th>Presenças</th>
               <th>Situação</th>
+              <th>Último e-mail</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {participants.map((participant) => {
               const certificate = participant.certificates[0];
+              const lastEmail = certificate?.emails[0];
               const ok =
                 event.minAttendanceDays === 0 ||
                 participant._count.attendances >= event.minAttendanceDays;
@@ -107,6 +120,9 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
                     >
                       {participant.name}
                     </Link>
+                    {participant.email ? (
+                      <p className="text-xs text-slate-500">{participant.email}</p>
+                    ) : null}
                   </td>
                   <td>
                     <QualificationBadge value={participant.qualification} />
@@ -127,17 +143,53 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
                       <span className="badge bg-amber-50 text-amber-700">Presença insuficiente</span>
                     )}
                   </td>
-                  <td className="text-right">
-                    {ok ? (
-                      <a
-                        href={`/api/eventos/${id}/certificados/${participant.id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="btn-secondary btn-sm"
-                      >
-                        {certificate ? "Baixar novamente" : "Emitir PDF"}
-                      </a>
-                    ) : null}
+                  <td className="text-xs text-slate-600">
+                    {lastEmail ? (
+                      <>
+                        <span
+                          className={
+                            lastEmail.status === "SENT"
+                              ? "text-emerald-700"
+                              : lastEmail.status === "FAILED"
+                                ? "text-red-700"
+                                : "text-amber-700"
+                          }
+                        >
+                          {lastEmail.status === "SENT"
+                            ? "Enviado"
+                            : lastEmail.status === "FAILED"
+                              ? "Falhou"
+                              : "Pendente"}
+                        </span>
+                        <br />
+                        {lastEmail.sentAt ? formatDate(lastEmail.sentAt) : lastEmail.recipient}
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="text-right whitespace-nowrap">
+                    <div className="flex justify-end gap-2">
+                      {ok ? (
+                        <a
+                          href={`/api/eventos/${id}/certificados/${participant.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-secondary btn-sm"
+                        >
+                          {certificate ? "Baixar" : "Emitir PDF"}
+                        </a>
+                      ) : null}
+                      {ok && participant.email ? (
+                        <form action={sendCertificateEmailAction}>
+                          <input type="hidden" name="eventId" value={id} />
+                          <input type="hidden" name="participantId" value={participant.id} />
+                          <button type="submit" className="btn-primary btn-sm">
+                            Enviar por e-mail
+                          </button>
+                        </form>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               );
