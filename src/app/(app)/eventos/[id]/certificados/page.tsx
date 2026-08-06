@@ -50,8 +50,8 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
 
   return (
     <div className="space-y-4">
-      {success ? <Alert tone="success">{success}</Alert> : null}
-      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {success ? <Alert tone="info">{success}</Alert> : null}
+      {error ? <Alert tone="error">{error}</Alert> : null}
 
       <Alert tone="info">
         {event.minAttendanceDays > 0
