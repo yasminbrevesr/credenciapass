@@ -65,7 +65,7 @@ export function LabelPicker({
 
   return (
     <div className="space-y-4">
-      <section className="card-pad grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="card-pad grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-start">
         <div>
           <label className="label" htmlFor="qualificacao">
             Qualificação
@@ -127,7 +127,7 @@ export function LabelPicker({
           </select>
         </div>
 
-        <div className="flex items-end">
+        <div className="flex items-start sm:col-span-2 lg:col-span-1 lg:pt-6">
           <button type="button" className="btn-primary w-full" onClick={print} disabled={selected.size === 0}>
             Gerar folha ({selected.size})
           </button>
