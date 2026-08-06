@@ -9,7 +9,6 @@ datasource db {
   provider = "postgresql"
 }
 
-/// Operadores do sistema (ADMIN gerencia tudo; OPERADOR credencia e consulta).
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -20,11 +19,11 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  checkins     Attendance[]
-  certificates Certificate[]
+  checkins          Attendance[]
+  certificates      Certificate[]
+  certificateEmails CertificateEmail[]
 }
 
-/// Evento que será credenciado. Os dias vêm em EventDay (a presença é por dia).
 model Event {
   id                String   @id @default(cuid())
   name              String
@@ -76,8 +75,9 @@ model Participant {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  attendances  Attendance[]
-  certificates Certificate[]
+  attendances       Attendance[]
+  certificates      Certificate[]
+  certificateEmails CertificateEmail[]
 
   @@unique([eventId, document])
   @@index([eventId, name])
@@ -108,5 +108,26 @@ model Certificate {
   issuedById    String?
   issuedBy      User?       @relation(fields: [issuedById], references: [id], onDelete: SetNull)
 
+  emails CertificateEmail[]
+
   @@unique([participantId])
+}
+
+model CertificateEmail {
+  id            String      @id @default(cuid())
+  certificateId String
+  certificate   Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  sentById      String?
+  sentBy        User?       @relation(fields: [sentById], references: [id], onDelete: SetNull)
+  recipient     String
+  status        String      @default("PENDING")
+  providerId    String?
+  errorMessage  String?
+  sentAt        DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@index([participantId, createdAt])
+  @@index([status, createdAt])
 }
