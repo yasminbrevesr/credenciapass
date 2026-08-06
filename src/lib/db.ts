@@ -1,15 +1,23 @@
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "@/generated/prisma/client";
 
-// Em desenvolvimento o Next recarrega os módulos a cada alteração; guardar a
-// instância no globalThis evita abrir uma conexão nova a cada hot reload.
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 function createClient() {
-  const adapter = new PrismaBetterSqlite3({
-    url: process.env.DATABASE_URL ?? "file:./data/credenciapass.db",
+  const connectionString = process.env.DATABASE_URL;
+
+  if (!connectionString) {
+    throw new Error("DATABASE_URL não configurada. Defina a conexão PostgreSQL do Supabase.");
+  }
+
+  const adapter = new PrismaPg({
+    connectionString,
+    max: process.env.NODE_ENV === "production" ? 5 : 10,
+    connectionTimeoutMillis: 10_000,
+    idleTimeoutMillis: 10_000,
   });
+
   return new PrismaClient({ adapter });
 }
 
