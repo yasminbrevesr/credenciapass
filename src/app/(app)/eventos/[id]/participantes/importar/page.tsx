@@ -30,7 +30,7 @@ export default async function ImportParticipantsPage(
         <p className="mt-1 text-sm text-slate-500">Evento: {event.name}</p>
       </div>
 
-      {error ? <Alert tone="danger">{error}</Alert> : null}
+      {error ? <Alert tone="error">{error}</Alert> : null}
       {imported || duplicated || invalid ? (
         <Alert tone="info">
           Importados: <strong>{imported}</strong>. Duplicados ignorados: <strong>{duplicated}</strong>.
