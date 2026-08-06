@@ -2,6 +2,7 @@
 
 import ExcelJS from "exceljs";
 import { redirect } from "next/navigation";
+import { Readable } from "node:stream";
 
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -51,7 +52,8 @@ export async function importParticipantsAction(formData: FormData) {
   }
 
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(Buffer.from(await file.arrayBuffer()));
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  await workbook.xlsx.read(Readable.from(bytes));
   const worksheet = workbook.worksheets[0];
   if (!worksheet) {
     redirect(`/eventos/${eventId}/participantes/importar?erro=Planilha+vazia`);
