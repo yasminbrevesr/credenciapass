@@ -4,14 +4,18 @@
  */
 import "dotenv/config";
 
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 
 import { PrismaClient } from "../src/generated/prisma/client";
 
-const adapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL ?? "file:./data/credenciapass.db",
-});
+const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error("Defina DIRECT_URL ou DATABASE_URL no arquivo .env.");
+}
+
+const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@credenciapass.local";
@@ -32,14 +36,22 @@ function dateOnly(value: string) {
 }
 
 async function main() {
+  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+
   const admin = await prisma.user.upsert({
     where: { email: ADMIN_EMAIL },
-    update: {},
+    update: {
+      name: "Administrador",
+      role: "ADMIN",
+      active: true,
+      passwordHash,
+    },
     create: {
       name: "Administrador",
       email: ADMIN_EMAIL,
       role: "ADMIN",
-      passwordHash: await bcrypt.hash(ADMIN_PASSWORD, 10),
+      active: true,
+      passwordHash,
     },
   });
   console.log(`Usuário administrador: ${admin.email}`);
@@ -96,7 +108,6 @@ async function main() {
       },
     });
 
-    // Presença nos dois primeiros dias, menos o último inscrito.
     if (name !== "Fernanda Alves") {
       await prisma.attendance.createMany({
         data: event.days.slice(0, 2).map((day) => ({
