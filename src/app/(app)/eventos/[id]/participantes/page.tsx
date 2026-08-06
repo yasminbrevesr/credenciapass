@@ -72,6 +72,9 @@ export default async function ParticipantsPage(props: PageProps<"/eventos/[id]/p
           <a href={`/api/eventos/${id}/relatorios/inscritos`} className="btn-secondary btn-sm">
             Exportar Excel
           </a>
+          <Link href={`/eventos/${id}/participantes/importar`} className="btn-secondary btn-sm">
+            Importar planilha
+          </Link>
           <Link href={`/eventos/${id}/participantes/novo`} className="btn-primary btn-sm">
             Inscrever participante
           </Link>
