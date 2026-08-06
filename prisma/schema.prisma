@@ -1,5 +1,4 @@
-// CredenciaPass — schema do banco (SQLite via driver adapter better-sqlite3).
-// Para migrar para PostgreSQL depois, basta trocar o provider abaixo e o adapter em src/lib/db.ts.
+// CredenciaPass — schema PostgreSQL hospedado no Supabase.
 
 generator client {
   provider = "prisma-client"
@@ -7,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 /// Operadores do sistema (ADMIN gerencia tudo; OPERADOR credencia e consulta).
@@ -27,23 +26,20 @@ model User {
 
 /// Evento que será credenciado. Os dias vêm em EventDay (a presença é por dia).
 model Event {
-  id             String   @id @default(cuid())
-  name           String
-  description    String?
-  location       String?
-  organizer      String?
-  startDate      DateTime
-  endDate        DateTime
-  workloadHours  Float?
-  /// Lista de qualificações aceitas, em JSON: ["Participante","Professor",...]
-  qualifications String   @default("[\"Participante\",\"Professor\",\"Colaborador\"]")
-  /// Texto do certificado com marcadores {{nome}}, {{evento}}, {{periodo}}, etc.
-  certificateText String?
-  /// Presença mínima (em dias) exigida para emitir certificado. 0 = não exige.
-  minAttendanceDays Int   @default(0)
-  archived       Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                String   @id @default(cuid())
+  name              String
+  description       String?
+  location          String?
+  organizer         String?
+  startDate         DateTime
+  endDate           DateTime
+  workloadHours     Float?
+  qualifications    String   @default("[\"Participante\",\"Professor\",\"Colaborador\"]")
+  certificateText   String?
+  minAttendanceDays Int      @default(0)
+  archived          Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   days         EventDay[]
   participants Participant[]
@@ -51,7 +47,6 @@ model Event {
   @@index([archived, startDate])
 }
 
-/// Cada dia do evento em que há checagem de presença.
 model EventDay {
   id      String   @id @default(cuid())
   eventId String
@@ -65,7 +60,6 @@ model EventDay {
   @@index([eventId])
 }
 
-/// Inscrito no evento. `code` é o conteúdo do QR Code / código de barras do crachá.
 model Participant {
   id            String   @id @default(cuid())
   eventId       String
@@ -90,15 +84,13 @@ model Participant {
   @@index([eventId, qualification])
 }
 
-/// Presença confirmada de um participante em um dia do evento.
 model Attendance {
-  id            String   @id @default(cuid())
+  id            String      @id @default(cuid())
   participantId String
   participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
   eventDayId    String
   eventDay      EventDay    @relation(fields: [eventDayId], references: [id], onDelete: Cascade)
   checkedInAt   DateTime    @default(now())
-  /// QRCODE | MANUAL
   method        String      @default("MANUAL")
   operatorId    String?
   operator      User?       @relation(fields: [operatorId], references: [id], onDelete: SetNull)
@@ -107,15 +99,14 @@ model Attendance {
   @@index([eventDayId])
 }
 
-/// Registro de emissão de certificado (permite validação pública pelo código).
 model Certificate {
-  id            String   @id @default(cuid())
+  id            String      @id @default(cuid())
   participantId String
   participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
-  code          String   @unique
-  issuedAt      DateTime @default(now())
+  code          String      @unique
+  issuedAt      DateTime    @default(now())
   issuedById    String?
-  issuedBy      User?    @relation(fields: [issuedById], references: [id], onDelete: SetNull)
+  issuedBy      User?       @relation(fields: [issuedById], references: [id], onDelete: SetNull)
 
   @@unique([participantId])
 }
