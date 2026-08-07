@@ -19,8 +19,8 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
   });
   if (!event) notFound();
 
-  const qualification =
-    typeof searchParams.qualificacao === "string" ? searchParams.qualificacao : "";
+  const qualification = typeof searchParams.qualificacao === "string" ? searchParams.qualificacao : "";
+  const requiredDays = Math.max(1, event.minAttendanceDays);
 
   const participants = await prisma.participant.findMany({
     where: { eventId: id, ...(qualification ? { qualification } : {}) },
@@ -31,10 +31,7 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
     },
   });
 
-  const eligible = participants.filter(
-    (participant) =>
-      event.minAttendanceDays === 0 || participant._count.attendances >= event.minAttendanceDays,
-  );
+  const eligible = participants.filter((participant) => participant._count.attendances >= requiredDays);
 
   const batchParams = new URLSearchParams();
   if (qualification) batchParams.set("qualificacao", qualification);
@@ -43,12 +40,8 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
   return (
     <div className="space-y-4">
       <Alert tone="info">
-        {event.minAttendanceDays > 0
-          ? `Este evento exige presença em pelo menos ${event.minAttendanceDays} ${
-              event.minAttendanceDays === 1 ? "dia" : "dias"
-            } para emitir o certificado.`
-          : "Todos os inscritos podem receber certificado (nenhuma presença mínima exigida)."}{" "}
-        O texto do certificado é configurado em{" "}
+        Certificados só podem ser emitidos para participantes com presença registrada. Este evento exige pelo menos{" "}
+        <strong>{requiredDays} {requiredDays === 1 ? "dia" : "dias"}</strong> de presença. O texto do certificado é configurado em{" "}
         <Link href={`/eventos/${id}/editar`} className="underline">Configurações</Link>.
       </Alert>
 
@@ -66,9 +59,13 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
           <button type="submit" className="btn-secondary">Filtrar</button>
         </form>
 
-        <a href={batchHref} target="_blank" rel="noreferrer" className="btn-primary ml-auto">
-          Gerar PDF de todos os elegíveis ({eligible.length})
-        </a>
+        {eligible.length > 0 ? (
+          <a href={batchHref} target="_blank" rel="noreferrer" className="btn-primary ml-auto">
+            Gerar PDF dos elegíveis ({eligible.length})
+          </a>
+        ) : (
+          <button type="button" className="btn-secondary ml-auto" disabled>Nenhum elegível</button>
+        )}
       </div>
 
       <div className="card overflow-x-auto">
@@ -85,9 +82,7 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
           <tbody>
             {participants.map((participant) => {
               const certificate = participant.certificates[0];
-              const ok =
-                event.minAttendanceDays === 0 ||
-                participant._count.attendances >= event.minAttendanceDays;
+              const ok = participant._count.attendances >= requiredDays;
 
               return (
                 <tr key={participant.id}>
@@ -100,11 +95,9 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
                     </Link>
                   </td>
                   <td><QualificationBadge value={participant.qualification} /></td>
+                  <td className="text-slate-600">{participant._count.attendances} de {event._count.days}</td>
                   <td className="text-slate-600">
-                    {participant._count.attendances} de {event._count.days}
-                  </td>
-                  <td className="text-slate-600">
-                    {certificate ? (
+                    {certificate && ok ? (
                       <span className="text-xs">
                         Emitido em {formatDate(certificate.issuedAt)}
                         <br />
@@ -113,7 +106,7 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
                     ) : ok ? (
                       <span className="badge bg-emerald-50 text-emerald-700">Elegível</span>
                     ) : (
-                      <span className="badge bg-amber-50 text-amber-700">Presença insuficiente</span>
+                      <span className="badge bg-amber-50 text-amber-700">Ausente / presença insuficiente</span>
                     )}
                   </td>
                   <td className="text-right">
@@ -135,9 +128,7 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
         </table>
       </div>
 
-      {participants.length === 0 ? (
-        <p className="text-sm text-slate-500">Nenhum inscrito nesta seleção.</p>
-      ) : null}
+      {participants.length === 0 ? <p className="text-sm text-slate-500">Nenhum inscrito nesta seleção.</p> : null}
     </div>
   );
 }
