@@ -21,34 +21,46 @@ export async function createEventOperatorAction(
   if (!eventId || !name || !email) return { error: "Informe nome, e-mail e evento." };
   if (password.length < 6) return { error: "A senha deve ter pelo menos 6 caracteres." };
 
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    if (existing.role !== "OPERADOR") {
-      return { error: "Já existe um administrador com este e-mail." };
+  const passwordHash = await hashPassword(password);
+
+  const result = await prisma.$transaction(async (tx) => {
+    const event = await tx.event.findUnique({ where: { id: eventId }, select: { id: true } });
+    if (!event) return { error: "Evento não encontrado." } as const;
+
+    const existing = await tx.user.findUnique({ where: { email } });
+    if (existing) {
+      if (existing.role !== "OPERADOR") {
+        return { error: "Já existe um administrador com este e-mail." } as const;
+      }
+
+      const access = await tx.eventAccess.findUnique({
+        where: { userId_eventId: { userId: existing.id, eventId } },
+        select: { id: true },
+      });
+      if (access) return { error: "Este operador já está cadastrado neste evento." } as const;
+
+      await tx.user.update({
+        where: { id: existing.id },
+        data: { name, active: true, passwordHash },
+      });
+      await tx.eventAccess.create({ data: { userId: existing.id, eventId } });
+      return { ok: true } as const;
     }
 
-    const access = await prisma.eventAccess.findUnique({
-      where: { userId_eventId: { userId: existing.id, eventId } },
-    });
-    if (access) return { error: "Este operador já está cadastrado neste evento." };
-
-    await prisma.user.update({
-      where: { id: existing.id },
-      data: { name, active: true, passwordHash: await hashPassword(password) },
-    });
-    await prisma.eventAccess.create({ data: { userId: existing.id, eventId } });
-  } else {
-    const user = await prisma.user.create({
+    const user = await tx.user.create({
       data: {
         name,
         email,
         role: "OPERADOR",
         active: true,
-        passwordHash: await hashPassword(password),
+        passwordHash,
       },
     });
-    await prisma.eventAccess.create({ data: { userId: user.id, eventId } });
-  }
+    await tx.eventAccess.create({ data: { userId: user.id, eventId } });
+    return { ok: true } as const;
+  });
+
+  if ("error" in result) return { error: result.error };
 
   revalidatePath(`/eventos/${eventId}/operadores`);
   revalidatePath("/");
