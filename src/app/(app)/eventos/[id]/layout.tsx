@@ -2,13 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { NavLink } from "@/components/nav-link";
-import { requireUser } from "@/lib/auth";
+import { requireEventAccess } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatPeriod } from "@/lib/utils";
 
 export default async function EventLayout({ children, params }: LayoutProps<"/eventos/[id]">) {
-  const user = await requireUser();
   const { id } = await params;
+  const user = await requireEventAccess(id);
 
   const event = await prisma.event.findUnique({ where: { id } });
   if (!event) notFound();
