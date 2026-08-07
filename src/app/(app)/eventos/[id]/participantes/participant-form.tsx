@@ -40,7 +40,6 @@ export function ParticipantForm({
     {},
   );
 
-  // Mantém a qualificação atual na lista mesmo que ela tenha saído das configurações.
   const options = qualifications.includes(values.qualification) || !values.qualification
     ? qualifications
     : [...qualifications, values.qualification];
@@ -52,30 +51,26 @@ export function ParticipantForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <label className="label" htmlFor="name">
-            Nome completo *
-          </label>
+          <label className="label" htmlFor="name">Nome completo *</label>
           <input id="name" name="name" className="input" defaultValue={values.name} required autoFocus />
         </div>
 
         <div>
-          <label className="label" htmlFor="document">
-            Documento de identificação *
-          </label>
+          <label className="label" htmlFor="document">CPF *</label>
           <input
             id="document"
             name="document"
             className="input"
             defaultValue={values.document}
-            placeholder="CPF, RG ou matrícula"
+            placeholder="000.000.000-00"
+            inputMode="numeric"
+            maxLength={14}
             required
           />
         </div>
 
         <div>
-          <label className="label" htmlFor="qualification">
-            Qualificação *
-          </label>
+          <label className="label" htmlFor="qualification">Qualificação *</label>
           <select
             id="qualification"
             name="qualification"
@@ -83,24 +78,18 @@ export function ParticipantForm({
             defaultValue={values.qualification || options[0]}
           >
             {options.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
+              <option key={option} value={option}>{option}</option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="label" htmlFor="email">
-            E-mail
-          </label>
+          <label className="label" htmlFor="email">E-mail</label>
           <input id="email" name="email" type="email" className="input" defaultValue={values.email} />
         </div>
 
         <div>
-          <label className="label" htmlFor="phone">
-            Celular
-          </label>
+          <label className="label" htmlFor="phone">Celular</label>
           <input
             id="phone"
             name="phone"
@@ -112,28 +101,17 @@ export function ParticipantForm({
         </div>
 
         <div>
-          <label className="label" htmlFor="organization">
-            Instituição / empresa
-          </label>
-          <input
-            id="organization"
-            name="organization"
-            className="input"
-            defaultValue={values.organization}
-          />
+          <label className="label" htmlFor="organization">Instituição / empresa</label>
+          <input id="organization" name="organization" className="input" defaultValue={values.organization} />
         </div>
 
         <div>
-          <label className="label" htmlFor="position">
-            Cargo / função
-          </label>
+          <label className="label" htmlFor="position">Cargo / função</label>
           <input id="position" name="position" className="input" defaultValue={values.position} />
         </div>
 
         <div className="sm:col-span-2">
-          <label className="label" htmlFor="notes">
-            Observações
-          </label>
+          <label className="label" htmlFor="notes">Observações</label>
           <textarea id="notes" name="notes" className="input min-h-20" defaultValue={values.notes} />
         </div>
       </div>
@@ -149,9 +127,7 @@ export function ParticipantForm({
             Inscrever e cadastrar outro
           </SubmitButton>
         )}
-        <Link href={cancelHref} className="btn-secondary">
-          Cancelar
-        </Link>
+        <Link href={cancelHref} className="btn-secondary">Cancelar</Link>
       </div>
     </form>
   );
