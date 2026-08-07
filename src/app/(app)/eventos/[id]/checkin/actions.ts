@@ -18,10 +18,40 @@ export type CheckInResult = {
   checkedInAt?: string;
 };
 
-/**
- * Confirma a presença a partir do código do crachá (QR Code, código de barras
- * ou digitado). Também aceita o documento do participante como alternativa.
- */
+export type RecentCheckIn = {
+  id: string;
+  checkedInAt: string;
+  method: string;
+  participant: {
+    id: string;
+    name: string;
+    qualification: string;
+    organization: string | null;
+  };
+  operator: { name: string } | null;
+};
+
+export async function getRecentCheckIns(eventId: string, eventDayId: string): Promise<RecentCheckIn[]> {
+  await requireUser();
+  const rows = await prisma.attendance.findMany({
+    where: { eventDayId, participant: { eventId } },
+    orderBy: { checkedInAt: "desc" },
+    take: 15,
+    include: {
+      participant: { select: { id: true, name: true, qualification: true, organization: true } },
+      operator: { select: { name: true } },
+    },
+  });
+
+  return rows.map((row) => ({
+    id: row.id,
+    checkedInAt: row.checkedInAt.toISOString(),
+    method: row.method,
+    participant: row.participant,
+    operator: row.operator,
+  }));
+}
+
 export async function checkInByCode(input: {
   eventId: string;
   eventDayId: string;
@@ -91,7 +121,6 @@ export async function checkInByCode(input: {
   };
 }
 
-/** Marca/desmarca presença manualmente (usado nas listas e na ficha do inscrito). */
 export async function toggleAttendanceAction(formData: FormData) {
   const user = await requireUser();
   const eventId = String(formData.get("eventId") ?? "");
