@@ -17,7 +17,6 @@ function beep(ok: boolean) {
       window.AudioContext ??
       (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextClass) return;
-
     const context = new AudioContextClass();
     const oscillator = context.createOscillator();
     const gain = context.createGain();
@@ -31,15 +30,7 @@ function beep(ok: boolean) {
   } catch {}
 }
 
-export function CheckinStation({
-  eventId,
-  eventDayId,
-  dayLabel,
-}: {
-  eventId: string;
-  eventDayId: string;
-  dayLabel: string;
-}) {
+export function CheckinStation({ eventId, eventDayId, dayLabel }: { eventId: string; eventDayId: string; dayLabel: string }) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<CheckInResult | null>(null);
@@ -50,9 +41,7 @@ export function CheckinStation({
   const scanLockedRef = useRef(false);
 
   async function refreshHistory() {
-    try {
-      setHistory(await getRecentCheckIns(eventId, eventDayId));
-    } catch {}
+    try { setHistory(await getRecentCheckIns(eventId, eventDayId)); } catch {}
   }
 
   useEffect(() => {
@@ -64,7 +53,6 @@ export function CheckinStation({
   async function submitCode(value: string, method: "QRCODE" | "MANUAL") {
     const trimmed = value.trim();
     if (!trimmed || busy) return;
-
     setBusy(true);
     try {
       const response = await checkInByCode({ eventId, eventDayId, code: trimmed, method });
@@ -83,7 +71,6 @@ export function CheckinStation({
 
   useEffect(() => {
     if (!cameraOn) return;
-
     let scanner: { stop: () => Promise<void>; clear: () => void } | null = null;
     let cancelled = false;
     scanLockedRef.current = false;
@@ -93,10 +80,9 @@ export function CheckinStation({
         const { Html5Qrcode } = await import("html5-qrcode");
         const instance = new Html5Qrcode("leitor-camera");
         scanner = instance as unknown as { stop: () => Promise<void>; clear: () => void };
-
         await instance.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 240, height: 240 } },
+          { fps: 10, qrbox: { width: 220, height: 220 } },
           (decoded: string) => {
             if (scanLockedRef.current) return;
             scanLockedRef.current = true;
@@ -105,7 +91,6 @@ export function CheckinStation({
           },
           () => {},
         );
-
         if (cancelled) await instance.stop();
       } catch {
         setCameraError("Não foi possível acessar a câmera. Use o leitor USB ou digite o código.");
@@ -115,111 +100,66 @@ export function CheckinStation({
 
     return () => {
       cancelled = true;
-      if (scanner) {
-        scanner
-          .stop()
-          .then(() => scanner?.clear())
-          .catch(() => {});
-      }
+      if (scanner) scanner.stop().then(() => scanner?.clear()).catch(() => {});
     };
   }, [cameraOn, eventDayId]);
 
-  const tone =
-    result?.status === "ok"
-      ? "border-emerald-300 bg-emerald-50"
-      : result?.status === "duplicado"
-        ? "border-amber-300 bg-amber-50"
-        : "border-red-300 bg-red-50";
+  const tone = result?.status === "ok" ? "border-emerald-300 bg-emerald-50" : result?.status === "duplicado" ? "border-amber-300 bg-amber-50" : "border-red-300 bg-red-50";
 
   return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <section className="card-pad space-y-4">
-        <div>
-          <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Leitura do crachá</h2>
-          <p className="text-sm text-slate-500">Registrando presença de {dayLabel}.</p>
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,.85fr)]">
+      <section className="card p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Leitura do crachá</h2>
+            <p className="text-sm text-slate-500">Presença de {dayLabel}</p>
+          </div>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => { setCameraError(""); setCameraOn((current) => !current); }}>
+            {cameraOn ? "Cancelar leitura" : "Escanear QR-Code"}
+          </button>
         </div>
 
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void submitCode(code, "MANUAL");
-          }}
-          className="flex gap-2"
-        >
-          <input
-            ref={inputRef}
-            className="input flex-1 text-lg"
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            placeholder="Passe o leitor ou digite o código / documento"
-            autoFocus
-            autoComplete="off"
-            disabled={busy}
-          />
-          <button type="submit" className="btn-primary" disabled={busy || !code.trim()}>
-            {busy ? "..." : "Confirmar"}
-          </button>
+        <form onSubmit={(event) => { event.preventDefault(); void submitCode(code, "MANUAL"); }} className="flex flex-col gap-2 sm:flex-row">
+          <input ref={inputRef} className="input flex-1" value={code} onChange={(event) => setCode(event.target.value)} placeholder="Código do crachá ou documento" autoFocus autoComplete="off" disabled={busy} />
+          <button type="submit" className="btn-primary sm:w-28" disabled={busy || !code.trim()}>{busy ? "..." : "Confirmar"}</button>
         </form>
 
-        <div>
-          <button
-            type="button"
-            className="btn-secondary btn-sm"
-            onClick={() => {
-              setCameraError("");
-              setCameraOn((current) => !current);
-            }}
-          >
-            {cameraOn ? "Desligar câmera" : "Escanear QR-Code"}
-          </button>
-          {cameraError ? <p className="mt-2 text-xs text-red-600">{cameraError}</p> : null}
-        </div>
-
-        <div id="leitor-camera" className={classNames("overflow-hidden rounded-lg", cameraOn ? "block" : "hidden")} />
+        {cameraError ? <p className="mt-2 text-xs text-red-600">{cameraError}</p> : null}
+        <div id="leitor-camera" className={classNames("mx-auto mt-4 max-w-sm overflow-hidden rounded-xl border border-slate-200", cameraOn ? "block" : "hidden")} />
 
         {result ? (
-          <div className={classNames("rounded-xl border p-4 transition", tone)}>
-            <p className="text-sm font-semibold text-slate-900">
-              {result.status === "ok" ? "Presença confirmada" : result.status === "duplicado" ? "Já registrado" : "Não registrado"}
-            </p>
-            {result.participant ? (
-              <>
-                <p className="mt-1 text-xl font-bold text-slate-900">{result.participant.name}</p>
-                <p className="text-sm text-slate-600">
-                  {result.participant.qualification}
-                  {result.participant.organization ? ` · ${result.participant.organization}` : ""}
-                </p>
-              </>
-            ) : null}
+          <div className={classNames("mt-4 rounded-xl border p-3", tone)}>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">{result.status === "ok" ? "Presença confirmada" : result.status === "duplicado" ? "Já registrado" : "Não registrado"}</p>
+                {result.participant ? <p className="mt-0.5 font-semibold text-slate-900">{result.participant.name}</p> : null}
+              </div>
+              {result.participant ? <span className="badge bg-white/70 text-slate-700">{result.participant.qualification}</span> : null}
+            </div>
+            {result.participant?.organization ? <p className="mt-1 text-xs text-slate-600">{result.participant.organization}</p> : null}
             <p className="mt-1 text-sm text-slate-600">{result.message}</p>
           </div>
         ) : null}
       </section>
 
-      <section className="card-pad">
+      <section className="card p-5">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Últimas leituras</h2>
-          <button type="button" className="btn-secondary btn-sm" onClick={() => void refreshHistory()}>
-            Atualizar
-          </button>
+          <div>
+            <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Últimas leituras</h2>
+            <p className="text-xs text-slate-400">Atualização automática a cada 3 segundos</p>
+          </div>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => void refreshHistory()}>Atualizar</button>
         </div>
 
-        {history.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhuma presença registrada neste dia.</p>
-        ) : (
+        {history.length === 0 ? <p className="text-sm text-slate-500">Nenhuma presença registrada neste dia.</p> : (
           <ul className="divide-y divide-slate-100">
             {history.map((item) => (
-              <li key={item.id} className="flex items-center justify-between gap-3 py-2">
+              <li key={item.id} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-slate-800">{item.participant.name}</p>
-                  <p className="truncate text-xs text-slate-500">
-                    {item.participant.qualification}
-                    {item.operator?.name ? ` · por ${item.operator.name}` : ""}
-                  </p>
+                  <p className="truncate text-xs text-slate-500">{item.participant.qualification}{item.operator?.name ? ` · ${item.operator.name}` : ""}</p>
                 </div>
-                <span className="badge shrink-0 bg-emerald-50 text-emerald-700">
-                  {new Date(item.checkedInAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                </span>
+                <span className="shrink-0 text-xs font-medium text-emerald-700">{new Date(item.checkedInAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
               </li>
             ))}
           </ul>
