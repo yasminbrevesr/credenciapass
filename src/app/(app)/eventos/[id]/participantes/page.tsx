@@ -11,7 +11,7 @@ const PAGE_SIZE = 50;
 export const metadata = { title: "Inscritos e crachás" };
 
 export default async function ParticipantsPage(props: PageProps<"/eventos/[id]/participantes">) {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await props.params;
   const searchParams = await props.searchParams;
 
@@ -28,11 +28,11 @@ export default async function ParticipantsPage(props: PageProps<"/eventos/[id]/p
     ...(query
       ? {
           OR: [
-            { name: { contains: query } },
-            { document: { contains: query } },
-            { email: { contains: query } },
-            { code: { contains: query } },
-            { organization: { contains: query } },
+            { name: { contains: query, mode: "insensitive" as const } },
+            { document: { contains: query, mode: "insensitive" as const } },
+            { email: { contains: query, mode: "insensitive" as const } },
+            { code: { contains: query, mode: "insensitive" as const } },
+            { organization: { contains: query, mode: "insensitive" as const } },
           ],
         }
       : {}),
@@ -68,21 +68,25 @@ export default async function ParticipantsPage(props: PageProps<"/eventos/[id]/p
             {total} {total === 1 ? "inscrito" : "inscritos"}
             {query || qualification ? " encontrados" : ""}
           </p>
-          <p className="text-xs text-slate-400">Cadastre pessoas e gere os crachás com QR Code no mesmo fluxo.</p>
+          <p className="text-xs text-slate-400">Consulte inscritos e gere os crachás com QR Code no mesmo fluxo.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href={`/eventos/${id}/etiquetas`} className="btn-primary btn-sm">
             Gerar crachás / QR Codes
           </Link>
-          <a href={`/api/eventos/${id}/relatorios/inscritos`} className="btn-secondary btn-sm">
-            Exportar Excel
-          </a>
-          <Link href={`/eventos/${id}/participantes/importar`} className="btn-secondary btn-sm">
-            Importar planilha
-          </Link>
-          <Link href={`/eventos/${id}/participantes/novo`} className="btn-primary btn-sm">
-            Inscrever participante
-          </Link>
+          {user.role === "ADMIN" ? (
+            <>
+              <a href={`/api/eventos/${id}/relatorios/inscritos`} className="btn-secondary btn-sm">
+                Exportar Excel
+              </a>
+              <Link href={`/eventos/${id}/participantes/importar`} className="btn-secondary btn-sm">
+                Importar planilha
+              </Link>
+              <Link href={`/eventos/${id}/participantes/novo`} className="btn-primary btn-sm">
+                Inscrever participante
+              </Link>
+            </>
+          ) : null}
         </div>
       </div>
 
@@ -113,8 +117,12 @@ export default async function ParticipantsPage(props: PageProps<"/eventos/[id]/p
       {participants.length === 0 ? (
         <EmptyState
           title="Nenhum inscrito encontrado"
-          description={query || qualification ? "Ajuste os filtros para ver outros inscritos." : "Cadastre o primeiro inscrito deste evento."}
-          action={<Link href={`/eventos/${id}/participantes/novo`} className="btn-primary">Inscrever participante</Link>}
+          description={query || qualification ? "Ajuste os filtros para ver outros inscritos." : "Nenhum inscrito foi cadastrado neste evento."}
+          action={
+            user.role === "ADMIN" ? (
+              <Link href={`/eventos/${id}/participantes/novo`} className="btn-primary">Inscrever participante</Link>
+            ) : null
+          }
         />
       ) : (
         <div className="card overflow-x-auto">
