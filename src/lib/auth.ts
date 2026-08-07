@@ -60,7 +60,6 @@ export async function destroySession() {
   store.delete(SESSION_COOKIE);
 }
 
-/** Lê a sessão do cookie. Retorna null quando não há usuário válido. */
 export async function getSession(): Promise<SessionUser | null> {
   const store = await cookies();
   const token = store.get(SESSION_COOKIE)?.value;
@@ -76,16 +75,28 @@ export async function getSession(): Promise<SessionUser | null> {
   }
 }
 
-/** Garante que há alguém logado; caso contrário manda para o login. */
 export async function requireUser(): Promise<SessionUser> {
   const user = await getSession();
   if (!user) redirect("/login");
   return user;
 }
 
-/** Garante que o usuário logado é administrador. */
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await requireUser();
   if (user.role !== "ADMIN") redirect("/");
+  return user;
+}
+
+/** Administradores acessam todos os eventos; operadores somente os que foram atribuídos a eles. */
+export async function requireEventAccess(eventId: string): Promise<SessionUser> {
+  const user = await requireUser();
+  if (user.role === "ADMIN") return user;
+
+  const access = await prisma.eventAccess.findUnique({
+    where: { userId_eventId: { userId: user.id, eventId } },
+    select: { id: true },
+  });
+
+  if (!access) redirect("/");
   return user;
 }
