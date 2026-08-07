@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { QualificationBadge, StatCard } from "@/components/ui";
+import { QualificationBadge } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth";
 import {
   loadEventForReports,
@@ -56,25 +56,74 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
   };
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900">Central de relatórios</h2>
-        <p className="mt-1 text-sm text-slate-500">Indicadores gerais e listas operacionais do evento.</p>
-      </div>
+    <div className="space-y-6">
+      <section className="relative overflow-hidden rounded-[28px] border border-white/70 bg-gradient-to-br from-slate-950 via-slate-900 to-brand-900 p-6 text-white shadow-2xl shadow-slate-300/30 sm:p-8">
+        <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-brand-400/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-amber-300/10 blur-3xl" />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard compact label="Inscritos" value={participants.length} tone="brand" />
-        <StatCard compact label="Compareceram" value={generalPresent} tone="green" />
-        <StatCard compact label="Não compareceram" value={neverAttended} tone="amber" />
-        <StatCard compact label="Check-ins" value={totalAttendances} />
-        <StatCard compact label="Taxa de presença" value={`${attendanceRate}%`} />
-      </div>
-
-      <section className="card p-5">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="relative grid gap-8 lg:grid-cols-[1.25fr_.75fr] lg:items-end">
           <div>
-            <h3 className="font-semibold text-slate-900">Dashboard de presença</h3>
-            <p className="text-sm text-slate-500">Resumo visual do desempenho geral e por dia.</p>
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-xl">
+              Analytics · visão executiva
+            </div>
+            <h2 className="max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
+              Presença do evento em uma visão mais clara e acionável.
+            </h2>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">
+              Acompanhe adesão, volume de check-ins e evolução por dia sem perder o acesso às listas operacionais.
+            </p>
+
+            <div className="mt-7 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
+              <HeroMetric label="Inscritos" value={participants.length} />
+              <HeroMetric label="Compareceram" value={generalPresent} />
+              <HeroMetric label="Check-ins" value={totalAttendances} />
+              <HeroMetric label="Ausentes" value={neverAttended} />
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/[0.08] p-5 shadow-2xl backdrop-blur-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Taxa de presença</p>
+                <p className="mt-2 text-5xl font-semibold tracking-tight">{attendanceRate}%</p>
+              </div>
+              <div
+                className="grid h-20 w-20 place-items-center rounded-full"
+                style={{ background: `conic-gradient(#d89a50 ${attendanceRate * 3.6}deg, rgba(255,255,255,.12) 0deg)` }}
+              >
+                <div className="h-14 w-14 rounded-full bg-slate-950/90" />
+              </div>
+            </div>
+            <div className="mt-6 space-y-3">
+              {byDay.slice(0, 4).map((day) => (
+                <div key={day.id}>
+                  <div className="mb-1 flex items-center justify-between text-xs text-slate-300">
+                    <span>{formatDate(day.date)}</span>
+                    <span>{day.percent}%</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                    <div className="h-full rounded-full bg-brand-400" style={{ width: `${day.percent}%` }} />
+                  </div>
+                </div>
+              ))}
+              {byDay.length === 0 ? <p className="text-sm text-slate-400">Sem dias cadastrados.</p> : null}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <GlassMetric label="Taxa de presença" value={`${attendanceRate}%`} hint="Check-ins possíveis realizados" />
+        <GlassMetric label="Pessoas alcançadas" value={generalPresent} hint={`${neverAttended} ainda sem presença`} />
+        <GlassMetric label="Média por participante" value={participants.length ? (totalAttendances / participants.length).toFixed(1) : "0"} hint="Check-ins por inscrito" />
+        <GlassMetric label="Dias monitorados" value={event.days.length} hint="Janelas de presença" />
+      </div>
+
+      <section className="rounded-[24px] border border-white/70 bg-white/65 p-5 shadow-xl shadow-slate-200/40 backdrop-blur-xl">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">Performance</p>
+            <h3 className="mt-1 text-lg font-semibold text-slate-900">Presença geral e por dia</h3>
           </div>
           <div className="flex gap-2 text-xs">
             <span className="badge bg-emerald-50 text-emerald-700">Presentes</span>
@@ -129,7 +178,7 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
         </section>
       </div>
 
-      <section id="lista-presenca" className="card overflow-hidden scroll-mt-6">
+      <section id="lista-presenca" className="card overflow-hidden scroll-mt-24">
         <div className="border-b border-slate-200 p-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -201,18 +250,37 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
   );
 }
 
+function HeroMetric({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.07] px-4 py-3 backdrop-blur-xl">
+      <p className="text-2xl font-semibold tracking-tight">{value}</p>
+      <p className="mt-1 text-xs text-slate-400">{label}</p>
+    </div>
+  );
+}
+
+function GlassMetric({ label, value, hint }: { label: string; value: string | number; hint: string }) {
+  return (
+    <div className="rounded-[22px] border border-white/80 bg-white/60 p-5 shadow-lg shadow-slate-200/50 backdrop-blur-xl">
+      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</p>
+      <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">{value}</p>
+      <p className="mt-1 text-xs text-slate-500">{hint}</p>
+    </div>
+  );
+}
+
 function DashboardTile({ label, present, absent, total }: { label: string; present: number; absent: number; total: number }) {
   const pct = total > 0 ? Math.round((present / total) * 100) : 0;
   return (
-    <div className="rounded-xl border border-slate-200 p-4">
+    <div className="rounded-2xl border border-white/80 bg-white/70 p-4 shadow-sm backdrop-blur-xl">
       <div className="flex items-center justify-between gap-2">
         <p className="font-medium text-slate-800">{label}</p>
-        <span className="text-sm font-semibold text-slate-700">{pct}%</span>
+        <span className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white">{pct}%</span>
       </div>
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-amber-100">
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-amber-100">
         <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
       </div>
-      <div className="mt-2 flex justify-between text-xs text-slate-500">
+      <div className="mt-3 flex justify-between text-xs text-slate-500">
         <span>{present} presentes</span>
         <span>{absent} ausentes</span>
       </div>
