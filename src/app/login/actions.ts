@@ -7,6 +7,10 @@ import { prisma } from "@/lib/db";
 
 export type LoginState = { error?: string };
 
+function isSafeInternalPath(value: string) {
+  return value.startsWith("/") && !value.startsWith("//") && !value.includes("\\");
+}
+
 export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get("email") ?? "")
     .trim()
@@ -30,6 +34,5 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     role: user.role as "ADMIN" | "OPERADOR",
   });
 
-  // Só aceita caminhos internos, para não virar redirecionamento aberto.
-  redirect(redirectTo.startsWith("/") ? redirectTo : "/");
+  redirect(isSafeInternalPath(redirectTo) ? redirectTo : "/");
 }
