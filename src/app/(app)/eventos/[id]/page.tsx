@@ -40,40 +40,25 @@ export default async function EventOverviewPage(props: PageProps<"/eventos/[id]"
   const base = `/eventos/${event.id}`;
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard label="Inscritos" value={totalParticipants} tone="brand" />
-        <StatCard
-          label="Presenças hoje"
-          value={todayDay ? todayDay._count.attendances : "—"}
-          hint={todayDay ? formatDateLong(todayDay.date) : "Hoje não é dia de evento"}
-          tone="green"
-        />
-        <StatCard
-          label="Faltantes hoje"
-          value={missingToday ?? "—"}
-          hint={todayDay ? "Inscritos ainda sem presença hoje" : "Hoje não é dia de evento"}
-          tone="amber"
-        />
-        <StatCard label="Presenças no total" value={totalCheckins} />
-        <StatCard label="Dias de evento" value={event.days.length} />
+    <div className="space-y-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <StatCard compact label="Inscritos" value={totalParticipants} tone="brand" />
+        <StatCard compact label="Presenças hoje" value={todayDay ? todayDay._count.attendances : "—"} hint={todayDay ? formatDateLong(todayDay.date) : "Hoje não é dia de evento"} tone="green" />
+        <StatCard compact label="Faltantes hoje" value={missingToday ?? "—"} hint={todayDay ? "Ainda sem presença hoje" : "Hoje não é dia de evento"} tone="amber" />
+        <StatCard compact label="Presenças no total" value={totalCheckins} />
+        <StatCard compact label="Dias de evento" value={event.days.length} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-5 lg:grid-cols-3">
         <section className="card-pad lg:col-span-2">
-          <h2 className="mb-3 text-sm font-semibold tracking-wide text-slate-500 uppercase">
-            Presença por dia
-          </h2>
+          <h2 className="mb-3 text-sm font-semibold tracking-wide text-slate-500 uppercase">Presença por dia</h2>
 
           {event.days.length === 0 ? (
             <p className="text-sm text-slate-500">Nenhum dia configurado.</p>
           ) : (
             <ul className="divide-y divide-slate-100">
               {event.days.map((day) => {
-                const percent =
-                  totalParticipants > 0
-                    ? Math.round((day._count.attendances / totalParticipants) * 100)
-                    : 0;
+                const percent = totalParticipants > 0 ? Math.round((day._count.attendances / totalParticipants) * 100) : 0;
                 const isToday = dateOnly(day.date).getTime() === todayTime;
 
                 return (
@@ -85,9 +70,7 @@ export default async function EventOverviewPage(props: PageProps<"/eventos/[id]"
                     <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
                       <div className="h-full rounded-full bg-brand-500" style={{ width: `${percent}%` }} />
                     </div>
-                    <div className="w-24 text-right text-sm text-slate-600">
-                      {day._count.attendances} ({percent}%)
-                    </div>
+                    <div className="w-24 text-right text-sm text-slate-600">{day._count.attendances} ({percent}%)</div>
                   </li>
                 );
               })}
@@ -96,10 +79,7 @@ export default async function EventOverviewPage(props: PageProps<"/eventos/[id]"
         </section>
 
         <section className="card-pad">
-          <h2 className="mb-3 text-sm font-semibold tracking-wide text-slate-500 uppercase">
-            Inscritos por qualificação
-          </h2>
-
+          <h2 className="mb-3 text-sm font-semibold tracking-wide text-slate-500 uppercase">Inscritos por qualificação</h2>
           <ul className="space-y-2">
             {[...byQualification.entries()].map(([qualification, count]) => (
               <li key={qualification} className="flex items-center justify-between text-sm">
@@ -110,14 +90,8 @@ export default async function EventOverviewPage(props: PageProps<"/eventos/[id]"
           </ul>
 
           <div className="mt-5 flex flex-col gap-2">
-            {user.role === "ADMIN" ? (
-              <Link href={`${base}/participantes/novo`} className="btn-primary">
-                Inscrever participante
-              </Link>
-            ) : null}
-            <Link href={`${base}/checkin`} className="btn-secondary">
-              Abrir check-in
-            </Link>
+            {user.role === "ADMIN" ? <Link href={`${base}/participantes/novo`} className="btn-primary">Inscrever participante</Link> : null}
+            <Link href={`${base}/checkin`} className="btn-secondary">Abrir check-in</Link>
           </div>
         </section>
       </div>
