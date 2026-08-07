@@ -21,12 +21,13 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/eventos/[id
   }
 
   const pdf = await buildCertificatePdf([data]);
-  const fileName = `certificado-${slugify(data.participantName)}.pdf`;
+  const fileName = `${slugify(data.participantName)}-certificado-${slugify(data.eventName)}.pdf`;
+  const encodedName = encodeURIComponent(`${data.participantName} - Certificado - ${data.eventName}.pdf`);
 
   return new NextResponse(pdf as BodyInit, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `inline; filename="${fileName}"`,
+      "Content-Disposition": `attachment; filename="${fileName}"; filename*=UTF-8''${encodedName}`,
       "Cache-Control": "no-store",
     },
   });
