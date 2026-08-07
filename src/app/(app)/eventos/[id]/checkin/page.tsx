@@ -50,6 +50,10 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
     event.days[0];
 
   const query = typeof searchParams.q === "string" ? searchParams.q.trim() : "";
+  const status = searchParams.situacao === "presentes" || searchParams.situacao === "ausentes"
+    ? searchParams.situacao
+    : "todos";
+
   const participantWhere = {
     eventId: id,
     ...(query
@@ -62,6 +66,8 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
           ],
         }
       : {}),
+    ...(status === "presentes" ? { attendances: { some: { eventDayId: selectedDay.id } } } : {}),
+    ...(status === "ausentes" ? { attendances: { none: { eventDayId: selectedDay.id } } } : {}),
   };
 
   const [attendanceCount, matches, recent] = await Promise.all([
@@ -125,9 +131,9 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
           Check-in manual (sem crachá)
         </h2>
 
-        <form className="flex flex-wrap items-end gap-3" action={base}>
+        <form className="grid gap-3 md:grid-cols-[1fr_200px_auto_auto] md:items-end" action={base}>
           <input type="hidden" name="dia" value={selectedDay.id} />
-          <div className="min-w-56 flex-1">
+          <div>
             <label className="label" htmlFor="q">Buscar inscrito</label>
             <input
               id="q"
@@ -137,8 +143,16 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
               placeholder="Digite parte do nome, CPF ou e-mail"
             />
           </div>
-          <button type="submit" className="btn-primary">Buscar</button>
-          {query ? <Link href={`${base}?dia=${selectedDay.id}`} className="btn-secondary">Limpar</Link> : null}
+          <div>
+            <label className="label" htmlFor="situacao">Situação</label>
+            <select id="situacao" name="situacao" className="input" defaultValue={status}>
+              <option value="todos">Todos</option>
+              <option value="presentes">Presentes</option>
+              <option value="ausentes">Ausentes</option>
+            </select>
+          </div>
+          <button type="submit" className="btn-primary">Filtrar</button>
+          {(query || status !== "todos") ? <Link href={`${base}?dia=${selectedDay.id}`} className="btn-secondary">Limpar</Link> : null}
         </form>
 
         <div className="mt-4 max-h-[30rem] overflow-auto rounded-lg border border-slate-200">
@@ -189,12 +203,10 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
               })}
             </tbody>
           </table>
-          {matches.length === 0 ? (
-            <p className="p-4 text-sm text-slate-500">Nenhum inscrito encontrado.</p>
-          ) : null}
+          {matches.length === 0 ? <p className="p-4 text-sm text-slate-500">Nenhum inscrito encontrado.</p> : null}
         </div>
-        {!query && event._count.participants > 200 ? (
-          <p className="mt-2 text-xs text-slate-500">Exibindo os primeiros 200 inscritos. Use a busca para localizar os demais.</p>
+        {!query && status === "todos" && event._count.participants > 200 ? (
+          <p className="mt-2 text-xs text-slate-500">Exibindo os primeiros 200 inscritos. Use a busca ou o filtro para localizar os demais.</p>
         ) : null}
       </section>
 
