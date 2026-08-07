@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Alert, QualificationBadge } from "@/components/ui";
+import { Alert } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatDate, parseQualifications } from "@/lib/utils";
@@ -33,8 +33,6 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
     },
   });
 
-  const eligible = participants.filter((participant) => participant._count.attendances >= requiredDays);
-
   return (
     <div className="space-y-4">
       <Alert tone="info">
@@ -43,7 +41,7 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
         <Link href={`/eventos/${id}/editar`} className="underline">Configurações</Link>.
       </Alert>
 
-      <div className="card-pad flex flex-wrap items-end gap-3">
+      <div className="card-pad">
         <form className="flex flex-wrap items-end gap-3" action={`/eventos/${id}/certificados`}>
           <div className="w-56">
             <label className="label" htmlFor="qualificacao">Qualificação</label>
@@ -56,74 +54,28 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
           </div>
           <button type="submit" className="btn-secondary">Filtrar</button>
         </form>
-
-        {eligible.length > 0 ? (
-          <DownloadEligibleCertificates
-            eventId={id}
-            participants={eligible.map((participant) => ({ id: participant.id, name: participant.name }))}
-          />
-        ) : (
-          <button type="button" className="btn-secondary ml-auto" disabled>Nenhum elegível</button>
-        )}
       </div>
 
-      <div className="card overflow-x-auto">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Qualificação</th>
-              <th>Presenças</th>
-              <th>Situação</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {participants.map((participant) => {
-              const certificate = participant.certificates[0];
-              const ok = participant._count.attendances >= requiredDays;
-
-              return (
-                <tr key={participant.id}>
-                  <td>
-                    <Link
-                      href={`/eventos/${id}/participantes/${participant.id}`}
-                      className="font-medium text-slate-900 hover:text-brand-600"
-                    >
-                      {participant.name}
-                    </Link>
-                  </td>
-                  <td><QualificationBadge value={participant.qualification} /></td>
-                  <td className="text-slate-600">{participant._count.attendances} de {event._count.days}</td>
-                  <td className="text-slate-600">
-                    {certificate && ok ? (
-                      <span className="text-xs">
-                        Emitido em {formatDate(certificate.issuedAt)}
-                        <br />
-                        <code className="text-slate-500">{certificate.code}</code>
-                      </span>
-                    ) : ok ? (
-                      <span className="badge bg-emerald-50 text-emerald-700">Elegível</span>
-                    ) : (
-                      <span className="badge bg-amber-50 text-amber-700">Ausente / presença insuficiente</span>
-                    )}
-                  </td>
-                  <td className="text-right">
-                    {ok ? (
-                      <a
-                        href={`/api/eventos/${id}/certificados/${participant.id}`}
-                        className="btn-secondary btn-sm"
-                      >
-                        {certificate ? "Baixar novamente" : "Baixar certificado"}
-                      </a>
-                    ) : null}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <DownloadEligibleCertificates
+        eventId={id}
+        participants={participants.map((participant) => {
+          const eligible = participant._count.attendances >= requiredDays;
+          const certificate = participant.certificates[0];
+          return {
+            id: participant.id,
+            name: participant.name,
+            qualification: participant.qualification || "S/N",
+            attendanceLabel: `${participant._count.attendances} de ${event._count.days}`,
+            statusLabel: eligible
+              ? certificate
+                ? `Emitido em ${formatDate(certificate.issuedAt)}`
+                : "Elegível"
+              : "Ausente / presença insuficiente",
+            eligible,
+            downloadLabel: certificate ? "Baixar novamente" : "Baixar certificado",
+          };
+        })}
+      />
 
       {participants.length === 0 ? <p className="text-sm text-slate-500">Nenhum inscrito nesta seleção.</p> : null}
     </div>
