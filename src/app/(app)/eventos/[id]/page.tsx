@@ -24,6 +24,7 @@ export default async function EventOverviewPage(props: PageProps<"/eventos/[id]"
   const todayTime = dateOnly(new Date()).getTime();
   const todayDay = event.days.find((day) => dateOnly(day.date).getTime() === todayTime);
   const totalCheckins = event.days.reduce((sum, day) => sum + day._count.attendances, 0);
+  const missingToday = todayDay ? Math.max(0, totalParticipants - todayDay._count.attendances) : null;
 
   const byQualification = new Map<string, number>();
   for (const qualification of parseQualifications(event.qualifications)) {
@@ -40,13 +41,19 @@ export default async function EventOverviewPage(props: PageProps<"/eventos/[id]"
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard label="Inscritos" value={totalParticipants} tone="brand" />
         <StatCard
           label="Presenças hoje"
           value={todayDay ? todayDay._count.attendances : "—"}
           hint={todayDay ? formatDateLong(todayDay.date) : "Hoje não é dia de evento"}
           tone="green"
+        />
+        <StatCard
+          label="Faltantes hoje"
+          value={missingToday ?? "—"}
+          hint={todayDay ? "Inscritos ainda sem presença hoje" : "Hoje não é dia de evento"}
+          tone="amber"
         />
         <StatCard label="Presenças no total" value={totalCheckins} />
         <StatCard label="Dias de evento" value={event.days.length} />
