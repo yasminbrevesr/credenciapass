@@ -2,7 +2,6 @@
 
 import ExcelJS from "exceljs";
 import { redirect } from "next/navigation";
-import { Readable } from "node:stream";
 
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -62,7 +61,11 @@ export async function importParticipantsAction(formData: FormData) {
 
   const workbook = new ExcelJS.Workbook();
   const fileBuffer = Buffer.from(await file.arrayBuffer());
-  await workbook.xlsx.read(Readable.from([fileBuffer]));
+
+  // Carrega o XLSX diretamente em memória. O uso de stream aqui causava
+  // falhas intermitentes do parser do ExcelJS em arquivos maiores na Vercel.
+  await workbook.xlsx.load(fileBuffer as unknown as ExcelJS.Buffer);
+
   const worksheet = workbook.worksheets[0];
   if (!worksheet) redirectError(eventId, "Planilha vazia.");
   if (worksheet.rowCount > MAX_ROWS + 1) {
