@@ -56,7 +56,7 @@ export async function createParticipantAction(
   _prev: ParticipantFormState,
   formData: FormData,
 ): Promise<ParticipantFormState> {
-  await requireUser();
+  await requireAdmin();
   const eventId = String(formData.get("eventId") ?? "");
   const parsed = readForm(formData);
   if (typeof parsed === "string") return { error: parsed };
@@ -113,7 +113,8 @@ export async function deleteParticipantAction(formData: FormData) {
 }
 
 export async function regenerateCodeAction(formData: FormData) {
-  await requireUser();
+  const user = await requireUser();
+  if (user.role !== "ADMIN") return;
   const id = String(formData.get("id") ?? "");
   const eventId = String(formData.get("eventId") ?? "");
 
