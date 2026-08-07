@@ -8,6 +8,10 @@ import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatDocument, formatPhone, generateCode, normalizeEmail, titleCase } from "@/lib/utils";
 
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_ROWS = 10000;
+const BATCH_SIZE = 300;
+
 const HEADER_ALIASES: Record<string, string> = {
   nome: "name",
   name: "name",
@@ -40,20 +44,30 @@ function cellText(value: ExcelJS.CellValue) {
   return String(value).trim();
 }
 
+function redirectError(eventId: string, message: string): never {
+  redirect(`/eventos/${eventId}/participantes/importar?erro=${encodeURIComponent(message)}`);
+}
+
 export async function importParticipantsAction(formData: FormData) {
   await requireAdmin();
   const eventId = String(formData.get("eventId") ?? "");
   const file = formData.get("file");
 
   if (!(file instanceof File) || file.size === 0) {
-    redirect(`/eventos/${eventId}/participantes/importar?erro=Selecione+uma+planilha`);
+    redirectError(eventId, "Selecione uma planilha.");
+  }
+  if (file.size > MAX_FILE_BYTES) {
+    redirectError(eventId, "A planilha é muito grande. O limite é 10 MB.");
   }
 
   const workbook = new ExcelJS.Workbook();
   const bytes = new Uint8Array(await file.arrayBuffer());
   await workbook.xlsx.read(Readable.from(bytes));
   const worksheet = workbook.worksheets[0];
-  if (!worksheet) redirect(`/eventos/${eventId}/participantes/importar?erro=Planilha+vazia`);
+  if (!worksheet) redirectError(eventId, "Planilha vazia.");
+  if (worksheet.rowCount > MAX_ROWS + 1) {
+    redirectError(eventId, `A planilha pode ter no máximo ${MAX_ROWS.toLocaleString("pt-BR")} inscritos por importação.`);
+  }
 
   const headerMap = new Map<number, string>();
   worksheet.getRow(1).eachCell((cell, col) => {
@@ -62,12 +76,27 @@ export async function importParticipantsAction(formData: FormData) {
   });
 
   if (![...headerMap.values()].includes("name") || ![...headerMap.values()].includes("document")) {
-    redirect(`/eventos/${eventId}/participantes/importar?erro=${encodeURIComponent("A planilha precisa ter as colunas Nome e Documento.")}`);
+    redirectError(eventId, "A planilha precisa ter as colunas Nome e Documento.");
   }
 
-  let imported = 0;
   let skipped = 0;
   let invalid = 0;
+
+  const parsedRows: Array<{
+    eventId: string;
+    code: string;
+    name: string;
+    document: string;
+    email: string | null;
+    phone: string | null;
+    qualification: string;
+    organization: string | null;
+    position: string | null;
+    notes: string | null;
+  }> = [];
+
+  // Remove duplicidades dentro da própria planilha antes de tocar no banco.
+  const seenDocuments = new Set<string>();
 
   for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber += 1) {
     const row = worksheet.getRow(rowNumber);
@@ -80,27 +109,64 @@ export async function importParticipantsAction(formData: FormData) {
       continue;
     }
 
-    const phone = data.phone ? formatPhone(data.phone) : null;
-    try {
-      await prisma.participant.create({
-        data: {
-          eventId,
-          code: generateCode(),
-          name: titleCase(data.name),
-          document: formatDocument(data.document),
-          email: normalizeEmail(data.email),
-          phone: phone || null,
-          qualification: data.qualification?.trim() || "Participante",
-          organization: data.organization ? titleCase(data.organization) : null,
-          position: data.position ? titleCase(data.position) : null,
-          notes: data.notes?.trim() || null,
-        },
-      });
-      imported += 1;
-    } catch (error) {
-      if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "P2002") skipped += 1;
-      else throw error;
+    const document = formatDocument(data.document);
+    if (!document) {
+      invalid += 1;
+      continue;
     }
+    if (seenDocuments.has(document)) {
+      skipped += 1;
+      continue;
+    }
+    seenDocuments.add(document);
+
+    const phone = data.phone ? formatPhone(data.phone) : null;
+    parsedRows.push({
+      eventId,
+      code: generateCode(),
+      name: titleCase(data.name),
+      document,
+      email: normalizeEmail(data.email),
+      phone: phone || null,
+      qualification: data.qualification?.trim() || "Participante",
+      organization: data.organization ? titleCase(data.organization) : null,
+      position: data.position ? titleCase(data.position) : null,
+      notes: data.notes?.trim() || null,
+    });
+  }
+
+  if (parsedRows.length === 0) {
+    redirect(`/eventos/${eventId}/participantes/importar?importados=0&duplicados=${skipped}&invalidos=${invalid}`);
+  }
+
+  // Uma única consulta descobre quais documentos já existem neste evento.
+  // Isso evita centenas/milhares de INSERTs individuais e reduz drasticamente
+  // o tempo de execução em ambientes serverless como a Vercel.
+  const existing = await prisma.participant.findMany({
+    where: {
+      eventId,
+      document: { in: parsedRows.map((row) => row.document) },
+    },
+    select: { document: true },
+  });
+  const existingDocuments = new Set(existing.map((participant) => participant.document));
+  const newRows = parsedRows.filter((row) => {
+    if (existingDocuments.has(row.document)) {
+      skipped += 1;
+      return false;
+    }
+    return true;
+  });
+
+  let imported = 0;
+  for (let index = 0; index < newRows.length; index += BATCH_SIZE) {
+    const batch = newRows.slice(index, index + BATCH_SIZE);
+    const result = await prisma.participant.createMany({
+      data: batch,
+      skipDuplicates: true,
+    });
+    imported += result.count;
+    skipped += batch.length - result.count;
   }
 
   redirect(`/eventos/${eventId}/participantes/importar?importados=${imported}&duplicados=${skipped}&invalidos=${invalid}`);
