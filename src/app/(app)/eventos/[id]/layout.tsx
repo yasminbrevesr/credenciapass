@@ -30,9 +30,9 @@ export default async function EventLayout({ children, params }: LayoutProps<"/ev
           {event.location ? ` · ${event.location}` : ""}
         </p>
 
-        <nav className="mt-4 flex flex-wrap gap-1 border-b border-slate-200 pb-2">
+        <nav className="mt-4 flex flex-wrap gap-1 border-b border-slate-200/70 pb-2">
           <NavLink href={base} exact>Visão geral</NavLink>
-          <NavLink href={`${base}/participantes`}>Inscritos e crachás</NavLink>
+          {isAdmin ? <NavLink href={`${base}/participantes`}>Inscritos e crachás</NavLink> : null}
           <NavLink href={`${base}/checkin`}>Check-in</NavLink>
           {isAdmin ? <NavLink href={`${base}/relatorios`}>Relatórios</NavLink> : null}
           {isAdmin ? <NavLink href={`${base}/certificados`}>Certificados</NavLink> : null}
