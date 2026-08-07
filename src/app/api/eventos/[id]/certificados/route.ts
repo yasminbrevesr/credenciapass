@@ -10,6 +10,7 @@ import { slugify } from "@/lib/utils";
 export async function GET(request: Request, ctx: RouteContext<"/api/eventos/[id]/certificados">) {
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+  if (user.role !== "ADMIN") return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
 
   const { id } = await ctx.params;
   const { searchParams } = new URL(request.url);
