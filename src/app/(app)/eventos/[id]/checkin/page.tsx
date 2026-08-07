@@ -78,18 +78,37 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
       include: { attendances: { where: { eventDayId: selectedDay.id } } },
     }),
     prisma.attendance.findMany({
-      where: { eventDayId: selectedDay.id },
+      where: {
+        eventDayId: selectedDay.id,
+        eventDay: { eventId: id },
+        participant: { eventId: id },
+      },
       orderBy: { checkedInAt: "desc" },
-      take: 10,
-      include: { participant: true },
+      take: 15,
+      select: {
+        id: true,
+        checkedInAt: true,
+        method: true,
+        participant: {
+          select: { id: true, name: true, qualification: true, organization: true },
+        },
+        operator: { select: { name: true } },
+      },
     }),
   ]);
 
+  const initialHistory = recent.map((attendance) => ({
+    id: attendance.id,
+    checkedInAt: attendance.checkedInAt.toISOString(),
+    method: attendance.method,
+    participant: attendance.participant,
+    operator: attendance.operator,
+  }));
   const base = `/eventos/${id}/checkin`;
 
   return (
     <div className="space-y-6">
-      <CheckinStation eventId={id} eventDayId={selectedDay.id} />
+      <CheckinStation eventId={id} eventDayId={selectedDay.id} initialHistory={initialHistory} />
 
       <section className="card-pad">
         <h2 className="mb-3 text-sm font-semibold tracking-wide text-slate-500 uppercase">
@@ -167,7 +186,7 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
 
         {recent.length === 0 ? <p className="text-sm text-slate-500">Nenhuma presença registrada neste dia.</p> : (
           <ul className="divide-y divide-slate-100">
-            {recent.map((attendance) => (
+            {recent.slice(0, 10).map((attendance) => (
               <li key={attendance.id} className="flex items-center justify-between gap-3 py-2">
                 <div>
                   <p className="text-sm font-medium text-slate-800">{attendance.participant.name}</p>
