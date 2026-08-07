@@ -19,7 +19,6 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
           <nav className="flex flex-1 items-center gap-1">
             <NavLink href="/" exact>Eventos</NavLink>
-            {user.role === "ADMIN" ? <NavLink href="/movimentacoes">Movimentações</NavLink> : null}
             {user.role === "ADMIN" ? <NavLink href="/usuarios">Usuários</NavLink> : null}
           </nav>
 
