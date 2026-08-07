@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { SubmitButton } from "@/components/submit-button";
 import { PageHeader } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { parseQualifications, toInputDate } from "@/lib/utils";
 
@@ -12,7 +12,7 @@ import { EventForm } from "../../event-form";
 export const metadata = { title: "Editar evento" };
 
 export default async function EditEventPage(props: PageProps<"/eventos/[id]/editar">) {
-  const user = await requireUser();
+  await requireAdmin();
   const { id } = await props.params;
 
   const event = await prisma.event.findUnique({ where: { id } });
@@ -49,18 +49,16 @@ export default async function EditEventPage(props: PageProps<"/eventos/[id]/edit
             </SubmitButton>
           </form>
 
-          {user.role === "ADMIN" ? (
-            <form action={deleteEventAction}>
-              <input type="hidden" name="id" value={event.id} />
-              <SubmitButton
-                className="btn-danger"
-                pendingLabel="Excluindo..."
-                confirm={`Excluir "${event.name}" e TODOS os inscritos, presenças e certificados? Esta ação não pode ser desfeita.`}
-              >
-                Excluir evento
-              </SubmitButton>
-            </form>
-          ) : null}
+          <form action={deleteEventAction}>
+            <input type="hidden" name="id" value={event.id} />
+            <SubmitButton
+              className="btn-danger"
+              pendingLabel="Excluindo..."
+              confirm={`Excluir "${event.name}" e TODOS os inscritos, presenças e certificados? Esta ação não pode ser desfeita.`}
+            >
+              Excluir evento
+            </SubmitButton>
+          </form>
         </div>
         <p className="mt-3 text-xs text-slate-500">
           Arquivar mantém os dados e tira o evento da lista principal. Excluir apaga tudo em definitivo.
