@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 import { prisma } from "@/lib/db";
 import { SESSION_COOKIE } from "@/lib/session-cookie";
@@ -60,20 +61,27 @@ export async function destroySession() {
   store.delete(SESSION_COOKIE);
 }
 
-export async function getSession(): Promise<SessionUser | null> {
+/**
+ * A sessão é memoizada apenas no ciclo da request/renderização atual.
+ * Layouts e páginas aninhadas reutilizam a mesma validação de JWT e consulta do usuário.
+ */
+export const getSession = cache(async (): Promise<SessionUser | null> => {
   const store = await cookies();
   const token = store.get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
   try {
     const { payload } = await jwtVerify(token, secretKey());
-    const user = await prisma.user.findUnique({ where: { id: String(payload.sub) } });
+    const user = await prisma.user.findUnique({
+      where: { id: String(payload.sub) },
+      select: { id: true, name: true, email: true, role: true, active: true },
+    });
     if (!user || !user.active) return null;
     return { id: user.id, name: user.name, email: user.email, role: user.role as Role };
   } catch {
     return null;
   }
-}
+});
 
 export async function requireUser(): Promise<SessionUser> {
   const user = await getSession();
@@ -87,16 +95,19 @@ export async function requireAdmin(): Promise<SessionUser> {
   return user;
 }
 
+const hasEventAccess = cache(async (userId: string, eventId: string) => {
+  const access = await prisma.eventAccess.findUnique({
+    where: { userId_eventId: { userId, eventId } },
+    select: { id: true },
+  });
+  return Boolean(access);
+});
+
 /** Administradores acessam todos os eventos; operadores somente os que foram atribuídos a eles. */
 export async function requireEventAccess(eventId: string): Promise<SessionUser> {
   const user = await requireUser();
   if (user.role === "ADMIN") return user;
 
-  const access = await prisma.eventAccess.findUnique({
-    where: { userId_eventId: { userId: user.id, eventId } },
-    select: { id: true },
-  });
-
-  if (!access) redirect("/");
+  if (!(await hasEventAccess(user.id, eventId))) redirect("/");
   return user;
 }
