@@ -61,10 +61,6 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <ReportExportMenu eventId={id} />
-      </div>
-
       <section
         className="relative overflow-hidden rounded-[28px] border border-brand-300/20 p-5 text-white shadow-2xl shadow-black/20 sm:p-6"
         style={{
@@ -85,20 +81,24 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
               </p>
             </div>
 
-            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-2.5 pr-4 shadow-inner shadow-white/[0.02] backdrop-blur-xl">
-              <div
-                className="grid h-16 w-16 shrink-0 place-items-center rounded-full"
-                style={{
-                  background: `conic-gradient(#d89a50 ${attendanceRate * 3.6}deg, rgba(255,255,255,.10) 0deg)`,
-                }}
-              >
-                <div className="grid h-12 w-12 place-items-center rounded-full bg-black shadow-inner shadow-white/5">
-                  <span className="text-base font-bold text-brand-300">{attendanceRate}%</span>
+            <div className="flex flex-wrap items-center justify-end gap-2.5">
+              <ReportExportMenu eventId={id} />
+
+              <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-2.5 pr-4 shadow-inner shadow-white/[0.02] backdrop-blur-xl">
+                <div
+                  className="grid h-16 w-16 shrink-0 place-items-center rounded-full"
+                  style={{
+                    background: `conic-gradient(#d89a50 ${attendanceRate * 3.6}deg, rgba(255,255,255,.10) 0deg)`,
+                  }}
+                >
+                  <div className="grid h-12 w-12 place-items-center rounded-full bg-black shadow-inner shadow-white/5">
+                    <span className="text-base font-bold text-brand-300">{attendanceRate}%</span>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-300">Presença geral</p>
-                <p className="mt-0.5 text-xs text-zinc-400">{totalAttendances} de {possibleAttendances || 0} registros possíveis</p>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-300">Presença geral</p>
+                  <p className="mt-0.5 text-xs text-zinc-400">{totalAttendances} de {possibleAttendances || 0} registros possíveis</p>
+                </div>
               </div>
             </div>
           </div>
