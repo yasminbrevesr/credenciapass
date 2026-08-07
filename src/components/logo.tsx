@@ -1,3 +1,6 @@
+import Image from "next/image";
+
+import logoImage from "../../public/Logo Amarelo  (1).jpg";
 import { classNames } from "@/lib/utils";
 
 export function Logo({
@@ -12,6 +15,7 @@ export function Logo({
   const frameClass =
     size === "lg" ? "h-12 w-12" : size === "sm" ? "h-8 w-8" : "h-9 w-9";
   const textClass = size === "lg" ? "text-2xl" : size === "sm" ? "text-base" : "text-lg";
+  const imageSize = size === "lg" ? "48px" : size === "sm" ? "32px" : "36px";
 
   return (
     <span className="inline-flex items-center gap-2 whitespace-nowrap">
@@ -21,14 +25,13 @@ export function Logo({
           "relative shrink-0 overflow-hidden rounded-[10px] border border-white/60 bg-white shadow-sm",
         )}
       >
-        <img
-          src="/brevescorp-logo.svg"
+        <Image
+          src={logoImage}
           alt="CredenciaPass"
-          width={48}
-          height={48}
-          decoding="async"
-          fetchPriority="high"
-          className="absolute inset-1/2 h-[175%] w-[175%] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover"
+          fill
+          sizes={imageSize}
+          priority={size === "lg"}
+          className="scale-[1.75] object-cover"
         />
       </span>
 
