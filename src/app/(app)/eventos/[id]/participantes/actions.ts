@@ -52,6 +52,14 @@ function isDuplicateDocument(error: unknown) {
   );
 }
 
+function revalidateParticipantViews(eventId: string) {
+  revalidatePath(`/eventos/${eventId}`);
+  revalidatePath(`/eventos/${eventId}/participantes`);
+  revalidatePath(`/eventos/${eventId}/checkin`);
+  revalidatePath(`/eventos/${eventId}/relatorios`);
+  revalidatePath(`/eventos/${eventId}/certificados`);
+}
+
 export async function createParticipantAction(
   _prev: ParticipantFormState,
   formData: FormData,
@@ -69,8 +77,7 @@ export async function createParticipantAction(
     throw error;
   }
 
-  revalidatePath(`/eventos/${eventId}/participantes`);
-  revalidatePath(`/eventos/${eventId}`);
+  revalidateParticipantViews(eventId);
 
   if (formData.get("intent") === "save-and-new") {
     redirect(`/eventos/${eventId}/participantes/novo?ok=${encodeURIComponent(created.name)}`);
@@ -95,7 +102,7 @@ export async function updateParticipantAction(
     throw error;
   }
 
-  revalidatePath(`/eventos/${eventId}/participantes`);
+  revalidateParticipantViews(eventId);
   revalidatePath(`/eventos/${eventId}/participantes/${id}`);
   redirect(`/eventos/${eventId}/participantes/${id}`);
 }
@@ -107,9 +114,36 @@ export async function deleteParticipantAction(formData: FormData) {
 
   await prisma.participant.delete({ where: { id } });
 
-  revalidatePath(`/eventos/${eventId}/participantes`);
-  revalidatePath(`/eventos/${eventId}`);
+  revalidateParticipantViews(eventId);
   redirect(`/eventos/${eventId}/participantes`);
+}
+
+export async function deleteParticipantsBatchAction(eventId: string, participantIds: string[]) {
+  await requireAdmin();
+  const ids = [...new Set(participantIds.map((id) => String(id).trim()).filter(Boolean))];
+  if (!eventId || ids.length === 0) return { deleted: 0 };
+
+  const result = await prisma.participant.deleteMany({
+    where: {
+      eventId,
+      id: { in: ids },
+    },
+  });
+
+  revalidateParticipantViews(eventId);
+  return { deleted: result.count };
+}
+
+export async function deleteAllParticipantsAction(eventId: string) {
+  await requireAdmin();
+  if (!eventId) return { deleted: 0 };
+
+  const event = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true } });
+  if (!event) throw new Error("Evento não encontrado.");
+
+  const result = await prisma.participant.deleteMany({ where: { eventId } });
+  revalidateParticipantViews(eventId);
+  return { deleted: result.count };
 }
 
 export async function regenerateCodeAction(formData: FormData) {
