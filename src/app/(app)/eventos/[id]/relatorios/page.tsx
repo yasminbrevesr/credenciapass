@@ -81,32 +81,14 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center justify-end gap-2.5">
-              <ReportExportMenu eventId={id} />
-
-              <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-2.5 pr-4 shadow-inner shadow-white/[0.02] backdrop-blur-xl">
-                <div
-                  className="grid h-16 w-16 shrink-0 place-items-center rounded-full"
-                  style={{
-                    background: `conic-gradient(#d89a50 ${attendanceRate * 3.6}deg, rgba(255,255,255,.10) 0deg)`,
-                  }}
-                >
-                  <div className="grid h-12 w-12 place-items-center rounded-full bg-black shadow-inner shadow-white/5">
-                    <span className="text-base font-bold text-brand-300">{attendanceRate}%</span>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-300">Presença geral</p>
-                  <p className="mt-0.5 text-xs text-zinc-400">{totalAttendances} de {possibleAttendances || 0} registros possíveis</p>
-                </div>
-              </div>
-            </div>
+            <ReportExportMenu eventId={id} />
           </div>
 
-          <div className="mt-5 grid gap-2 sm:grid-cols-3">
+          <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             <PrimaryMetric label="Inscritos" value={participants.length} detail="base total do evento" />
             <PrimaryMetric label="Compareceram" value={generalPresent} detail={`${reachRate}% dos inscritos`} />
             <PrimaryMetric label="Check-ins" value={totalAttendances} detail={`${event.days.length} dia(s) monitorado(s)`} />
+            <AttendanceMetric rate={attendanceRate} total={totalAttendances} possible={possibleAttendances} />
           </div>
 
           <div className="mt-4 rounded-[20px] border border-white/10 bg-white/[0.025] p-4 backdrop-blur-sm">
@@ -269,7 +251,7 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
 
 function PrimaryMetric({ label, value, detail }: { label: string; value: string | number; detail: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3.5 backdrop-blur-xl">
+    <div className="min-h-[6.4rem] rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3.5 backdrop-blur-xl">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-zinc-500">{label}</p>
@@ -278,6 +260,28 @@ function PrimaryMetric({ label, value, detail }: { label: string; value: string 
         <span className="mt-1 h-2 w-2 rounded-full bg-brand-400 shadow-[0_0_14px_rgba(216,154,80,.8)]" />
       </div>
       <p className="mt-1 text-[11px] text-zinc-400">{detail}</p>
+    </div>
+  );
+}
+
+function AttendanceMetric({ rate, total, possible }: { rate: number; total: number; possible: number }) {
+  return (
+    <div className="flex min-h-[6.4rem] items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3.5 shadow-inner shadow-white/[0.02] backdrop-blur-xl">
+      <div
+        className="grid h-14 w-14 shrink-0 place-items-center rounded-full"
+        style={{
+          background: `conic-gradient(#d89a50 ${rate * 3.6}deg, rgba(255,255,255,.10) 0deg)`,
+        }}
+      >
+        <div className="grid h-10 w-10 place-items-center rounded-full bg-black shadow-inner shadow-white/5">
+          <span className="text-sm font-bold text-brand-300">{rate}%</span>
+        </div>
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-brand-300">Presença geral</p>
+        <p className="mt-1 text-sm font-semibold text-white">{total} de {possible || 0}</p>
+        <p className="mt-0.5 text-[11px] text-zinc-400">registros possíveis</p>
+      </div>
     </div>
   );
 }
