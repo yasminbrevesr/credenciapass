@@ -31,10 +31,26 @@ export type RecentCheckIn = {
   operator: { name: string } | null;
 };
 
+function isUniqueConstraintError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "P2002"
+  );
+}
+
+function revalidateCheckInViews(eventId: string, participantId?: string) {
+  revalidatePath(`/eventos/${eventId}/checkin`);
+  revalidatePath(`/eventos/${eventId}`);
+  revalidatePath(`/eventos/${eventId}/relatorios`);
+  if (participantId) revalidatePath(`/eventos/${eventId}/participantes/${participantId}`);
+}
+
 export async function getRecentCheckIns(eventId: string, eventDayId: string): Promise<RecentCheckIn[]> {
   await requireEventAccess(eventId);
   const rows = await prisma.attendance.findMany({
-    where: { eventDayId, participant: { eventId } },
+    where: { eventDayId, eventDay: { eventId }, participant: { eventId } },
     orderBy: { checkedInAt: "desc" },
     take: 15,
     include: {
@@ -64,6 +80,7 @@ export async function checkInByCode(input: {
 
   const day = await prisma.eventDay.findFirst({
     where: { id: input.eventDayId, eventId: input.eventId },
+    select: { id: true },
   });
   if (!day) return { status: "erro", message: "Dia do evento inválido." };
 
@@ -86,39 +103,41 @@ export async function checkInByCode(input: {
     organization: participant.organization,
   };
 
-  const existing = await prisma.attendance.findUnique({
-    where: {
-      participantId_eventDayId: { participantId: participant.id, eventDayId: day.id },
-    },
-  });
+  try {
+    const attendance = await prisma.attendance.create({
+      data: {
+        participantId: participant.id,
+        eventDayId: day.id,
+        method: input.method ?? "QRCODE",
+        operatorId: user.id,
+      },
+    });
 
-  if (existing) {
+    revalidateCheckInViews(input.eventId, participant.id);
+
+    return {
+      status: "ok",
+      message: `Presença confirmada para ${participant.name}.`,
+      participant: summary,
+      checkedInAt: attendance.checkedInAt.toISOString(),
+    };
+  } catch (error) {
+    if (!isUniqueConstraintError(error)) throw error;
+
+    const existing = await prisma.attendance.findUnique({
+      where: {
+        participantId_eventDayId: { participantId: participant.id, eventDayId: day.id },
+      },
+      select: { checkedInAt: true },
+    });
+
     return {
       status: "duplicado",
       message: `${participant.name} já teve presença registrada hoje.`,
       participant: summary,
-      checkedInAt: existing.checkedInAt.toISOString(),
+      checkedInAt: existing?.checkedInAt.toISOString(),
     };
   }
-
-  const attendance = await prisma.attendance.create({
-    data: {
-      participantId: participant.id,
-      eventDayId: day.id,
-      method: input.method ?? "QRCODE",
-      operatorId: user.id,
-    },
-  });
-
-  revalidatePath(`/eventos/${input.eventId}/checkin`);
-  revalidatePath(`/eventos/${input.eventId}`);
-
-  return {
-    status: "ok",
-    message: `Presença confirmada para ${participant.name}.`,
-    participant: summary,
-    checkedInAt: attendance.checkedInAt.toISOString(),
-  };
 }
 
 export async function toggleAttendanceAction(formData: FormData) {
@@ -128,20 +147,41 @@ export async function toggleAttendanceAction(formData: FormData) {
   if (!eventId || !participantId || !eventDayId) return;
 
   const user = await requireEventAccess(eventId);
+
+  const [participant, day] = await Promise.all([
+    prisma.participant.findFirst({
+      where: { id: participantId, eventId },
+      select: { id: true },
+    }),
+    prisma.eventDay.findFirst({
+      where: { id: eventDayId, eventId },
+      select: { id: true },
+    }),
+  ]);
+
+  if (!participant || !day) return;
+
   const existing = await prisma.attendance.findUnique({
-    where: { participantId_eventDayId: { participantId, eventDayId } },
+    where: { participantId_eventDayId: { participantId: participant.id, eventDayId: day.id } },
   });
 
   if (existing) {
     if (user.role !== "ADMIN") return;
     await prisma.attendance.delete({ where: { id: existing.id } });
   } else {
-    await prisma.attendance.create({
-      data: { participantId, eventDayId, method: "MANUAL", operatorId: user.id },
-    });
+    try {
+      await prisma.attendance.create({
+        data: {
+          participantId: participant.id,
+          eventDayId: day.id,
+          method: "MANUAL",
+          operatorId: user.id,
+        },
+      });
+    } catch (error) {
+      if (!isUniqueConstraintError(error)) throw error;
+    }
   }
 
-  revalidatePath(`/eventos/${eventId}/checkin`);
-  revalidatePath(`/eventos/${eventId}/participantes/${participantId}`);
-  revalidatePath(`/eventos/${eventId}`);
+  revalidateCheckInViews(eventId, participant.id);
 }
