@@ -60,38 +60,39 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
   return (
     <div className="space-y-4">
       <section
-        className="relative overflow-hidden rounded-[28px] border border-brand-300/15 p-5 text-white shadow-xl sm:p-6"
+        className="relative overflow-hidden rounded-[28px] border border-brand-300/20 p-5 text-white shadow-2xl shadow-black/20 sm:p-6"
         style={{
           background:
-            "radial-gradient(circle at 88% 10%, rgba(216,154,80,.22), transparent 27%), linear-gradient(135deg, #0f172a 0%, #111827 58%, #241b13 100%)",
+            "radial-gradient(circle at 88% 8%, rgba(216,154,80,.24), transparent 26%), radial-gradient(circle at 10% 92%, rgba(216,154,80,.08), transparent 24%), linear-gradient(135deg, #020202 0%, #080808 58%, #17100a 100%)",
         }}
       >
-        <div className="pointer-events-none absolute -left-20 bottom-0 h-44 w-44 rounded-full bg-brand-500/5 blur-3xl" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.018)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.018)_1px,transparent_1px)] bg-[size:26px_26px] opacity-30" />
+        <div className="pointer-events-none absolute -right-10 top-0 h-32 w-32 rounded-full bg-brand-400/10 blur-3xl" />
 
         <div className="relative">
           <div className="flex flex-wrap items-start justify-between gap-5">
             <div>
-              <div className="mb-3 h-1 w-10 rounded-full bg-brand-400" />
-              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Visão executiva</h2>
-              <p className="mt-1.5 max-w-xl text-sm text-slate-400">
+              <div className="mb-3 h-1 w-10 rounded-full bg-brand-400 shadow-[0_0_18px_rgba(216,154,80,.7)]" />
+              <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Visão executiva</h2>
+              <p className="mt-1.5 max-w-xl text-sm text-zinc-400">
                 Leitura consolidada de alcance, presença e desempenho do evento.
               </p>
             </div>
 
-            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.05] p-2.5 pr-4 backdrop-blur-xl">
+            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.045] p-2.5 pr-4 shadow-inner shadow-white/[0.02] backdrop-blur-xl">
               <div
                 className="grid h-16 w-16 shrink-0 place-items-center rounded-full"
                 style={{
                   background: `conic-gradient(#d89a50 ${attendanceRate * 3.6}deg, rgba(255,255,255,.10) 0deg)`,
                 }}
               >
-                <div className="grid h-12 w-12 place-items-center rounded-full bg-[#111827]">
+                <div className="grid h-12 w-12 place-items-center rounded-full bg-black shadow-inner shadow-white/5">
                   <span className="text-base font-bold text-brand-300">{attendanceRate}%</span>
                 </div>
               </div>
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-300">Presença geral</p>
-                <p className="mt-0.5 text-xs text-slate-400">{totalAttendances} de {possibleAttendances || 0} registros possíveis</p>
+                <p className="mt-0.5 text-xs text-zinc-400">{totalAttendances} de {possibleAttendances || 0} registros possíveis</p>
               </div>
             </div>
           </div>
@@ -102,10 +103,10 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
             <PrimaryMetric label="Check-ins" value={totalAttendances} detail={`${event.days.length} dia(s) monitorado(s)`} />
           </div>
 
-          <div className="mt-4 rounded-[20px] border border-white/10 bg-black/10 p-4 backdrop-blur-sm">
+          <div className="mt-4 rounded-[20px] border border-white/10 bg-white/[0.025] p-4 backdrop-blur-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">Progressão</p>
-              <span className="rounded-full border border-brand-300/20 bg-brand-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-brand-300">
+              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-zinc-400">Progressão</p>
+              <span className="rounded-full border border-brand-300/25 bg-brand-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-brand-300">
                 atualização ao vivo
               </span>
             </div>
@@ -118,27 +119,9 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
               />
 
               <div className="relative grid gap-3 sm:grid-cols-3">
-                <ProgressPoint
-                  step="01"
-                  label="Base cadastrada"
-                  value="100%"
-                  detail={`${participants.length} inscritos`}
-                  progress={100}
-                />
-                <ProgressPoint
-                  step="02"
-                  label="Pessoas alcançadas"
-                  value={`${reachRate}%`}
-                  detail={`${generalPresent} compareceram`}
-                  progress={reachRate}
-                />
-                <ProgressPoint
-                  step="03"
-                  label="Presença utilizada"
-                  value={`${attendanceRate}%`}
-                  detail={`${totalAttendances} check-ins`}
-                  progress={attendanceRate}
-                />
+                <ProgressPoint step="01" label="Base cadastrada" value="100%" detail={`${participants.length} inscritos`} progress={100} />
+                <ProgressPoint step="02" label="Pessoas alcançadas" value={`${reachRate}%`} detail={`${generalPresent} compareceram`} progress={reachRate} />
+                <ProgressPoint step="03" label="Presença utilizada" value={`${attendanceRate}%`} detail={`${totalAttendances} check-ins`} progress={attendanceRate} />
               </div>
             </div>
           </div>
@@ -198,9 +181,7 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
               {byQualification.length ? byQualification.map((row) => (
                 <div key={row.qualification} className="rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5">
                   <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <QualificationBadge value={row.qualification} />
-                    </div>
+                    <div className="min-w-0"><QualificationBadge value={row.qualification} /></div>
                     <span className="shrink-0 text-xs font-semibold text-slate-700">{row.total} · {row.percent}%</span>
                   </div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200/70">
@@ -220,7 +201,6 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
               <h3 className="font-semibold text-slate-900">Detalhamento</h3>
               <p className="text-sm text-slate-500">Use filtros apenas quando precisar investigar pessoas específicas.</p>
             </div>
-
             <form className="flex flex-wrap items-end gap-2" action={`/eventos/${id}/relatorios`}>
               <div>
                 <label className="label" htmlFor="escopo">Data</label>
@@ -235,12 +215,8 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <a href={filterHref(effectiveScope, "todos")} className={statusFilter === "todos" ? "btn-primary btn-sm" : "btn-secondary btn-sm"}>
-              Todos ({participants.length})
-            </a>
-            <a href={filterHref(effectiveScope, "ausentes")} className={statusFilter === "ausentes" ? "btn-primary btn-sm" : "btn-secondary btn-sm"}>
-              Ausentes ({selectedAbsent})
-            </a>
+            <a href={filterHref(effectiveScope, "todos")} className={statusFilter === "todos" ? "btn-primary btn-sm" : "btn-secondary btn-sm"}>Todos ({participants.length})</a>
+            <a href={filterHref(effectiveScope, "ausentes")} className={statusFilter === "ausentes" ? "btn-primary btn-sm" : "btn-secondary btn-sm"}>Ausentes ({selectedAbsent})</a>
           </div>
         </div>
 
@@ -287,40 +263,26 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
 
 function PrimaryMetric({ label, value, detail }: { label: string; value: string | number; detail: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.055] px-4 py-3.5 backdrop-blur-xl">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3.5 backdrop-blur-xl">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-500">{label}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-zinc-500">{label}</p>
           <p className="mt-1 text-2xl font-semibold tracking-tight text-white">{value}</p>
         </div>
-        <span className="mt-1 h-2 w-2 rounded-full bg-brand-400 shadow-[0_0_14px_rgba(216,154,80,.65)]" />
+        <span className="mt-1 h-2 w-2 rounded-full bg-brand-400 shadow-[0_0_14px_rgba(216,154,80,.8)]" />
       </div>
-      <p className="mt-1 text-[11px] text-slate-400">{detail}</p>
+      <p className="mt-1 text-[11px] text-zinc-400">{detail}</p>
     </div>
   );
 }
 
-function ProgressPoint({
-  step,
-  label,
-  value,
-  detail,
-  progress,
-}: {
-  step: string;
-  label: string;
-  value: string;
-  detail: string;
-  progress: number;
-}) {
+function ProgressPoint({ step, label, value, detail, progress }: { step: string; label: string; value: string; detail: string; progress: number }) {
   return (
-    <div className="relative rounded-2xl border border-white/10 bg-white/[0.045] p-3.5 sm:border-0 sm:bg-transparent sm:p-2 sm:text-center">
-      <div className="mx-auto grid h-8 w-8 place-items-center rounded-full border border-brand-300/40 bg-[#17181b] text-[10px] font-bold text-brand-300 shadow-[0_0_0_4px_rgba(216,154,80,.06)]">
-        {step}
-      </div>
-      <p className="mt-2 text-xs font-semibold text-slate-200">{label}</p>
+    <div className="relative rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 sm:border-0 sm:bg-transparent sm:p-2 sm:text-center">
+      <div className="mx-auto grid h-8 w-8 place-items-center rounded-full border border-brand-300/40 bg-black text-[10px] font-bold text-brand-300 shadow-[0_0_0_4px_rgba(216,154,80,.07)]">{step}</div>
+      <p className="mt-2 text-xs font-semibold text-zinc-200">{label}</p>
       <p className="mt-1 text-xl font-semibold tracking-tight text-white">{value}</p>
-      <p className="mt-0.5 text-[10px] text-slate-500">{detail}</p>
+      <p className="mt-0.5 text-[10px] text-zinc-500">{detail}</p>
       <div className="mx-auto mt-2 h-1 max-w-32 overflow-hidden rounded-full bg-white/10 sm:hidden">
         <div className="h-full rounded-full bg-brand-400" style={{ width: `${Math.max(0, Math.min(progress, 100))}%` }} />
       </div>
@@ -330,10 +292,10 @@ function ProgressPoint({
 
 function ExecutiveInsight({ label, value, detail }: { label: string; value: string | number; detail: string }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-brand-300/10 bg-brand-400/[0.055] px-4 py-3">
+    <div className="flex items-center justify-between gap-4 rounded-2xl border border-brand-300/15 bg-brand-400/[0.05] px-4 py-3">
       <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-brand-300/80">{label}</p>
-        <p className="mt-0.5 truncate text-[11px] text-slate-400">{detail}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-brand-300/85">{label}</p>
+        <p className="mt-0.5 truncate text-[11px] text-zinc-400">{detail}</p>
       </div>
       <p className="shrink-0 text-2xl font-semibold tracking-tight text-white">{value}</p>
     </div>
