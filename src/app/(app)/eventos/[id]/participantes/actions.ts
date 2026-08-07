@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireUser } from "@/lib/auth";
+import { requireAdmin, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
   formatDocument,
@@ -63,13 +63,9 @@ export async function createParticipantAction(
 
   let created;
   try {
-    created = await prisma.participant.create({
-      data: { ...parsed, eventId, code: generateCode() },
-    });
+    created = await prisma.participant.create({ data: { ...parsed, eventId, code: generateCode() } });
   } catch (error) {
-    if (isDuplicateDocument(error)) {
-      return { error: "Já existe um inscrito com este documento neste evento." };
-    }
+    if (isDuplicateDocument(error)) return { error: "Já existe um inscrito com este documento neste evento." };
     throw error;
   }
 
@@ -95,9 +91,7 @@ export async function updateParticipantAction(
   try {
     await prisma.participant.update({ where: { id }, data: parsed });
   } catch (error) {
-    if (isDuplicateDocument(error)) {
-      return { error: "Já existe um inscrito com este documento neste evento." };
-    }
+    if (isDuplicateDocument(error)) return { error: "Já existe um inscrito com este documento neste evento." };
     throw error;
   }
 
@@ -107,7 +101,7 @@ export async function updateParticipantAction(
 }
 
 export async function deleteParticipantAction(formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const eventId = String(formData.get("eventId") ?? "");
 
@@ -124,6 +118,5 @@ export async function regenerateCodeAction(formData: FormData) {
   const eventId = String(formData.get("eventId") ?? "");
 
   await prisma.participant.update({ where: { id }, data: { code: generateCode() } });
-
   revalidatePath(`/eventos/${eventId}/participantes/${id}`);
 }
