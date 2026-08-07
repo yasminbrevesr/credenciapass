@@ -10,10 +10,25 @@ export default async function EventsPage(props: PageProps<"/">) {
 
   const params = await props.searchParams;
   const showArchived = params.arquivados === "1";
+  const query = typeof params.q === "string" ? params.q.trim() : "";
+
+  const where = {
+    archived: showArchived,
+    ...(query
+      ? {
+          OR: [
+            { name: { contains: query, mode: "insensitive" as const } },
+            { location: { contains: query, mode: "insensitive" as const } },
+            { organizer: { contains: query, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+    ...(user.role === "OPERADOR" ? { accesses: { some: { userId: user.id } } } : {}),
+  };
 
   const [events, recentOperatorActivity] = await Promise.all([
     prisma.event.findMany({
-      where: { archived: showArchived },
+      where,
       orderBy: { startDate: "desc" },
       include: {
         _count: { select: { participants: true, days: true } },
@@ -34,15 +49,20 @@ export default async function EventsPage(props: PageProps<"/">) {
   ]);
 
   const today = dateOnly(new Date()).getTime();
+  const archivedHref = showArchived ? "/" : "/?arquivados=1";
 
   return (
     <>
       <PageHeader
         title={showArchived ? "Eventos arquivados" : "Eventos"}
-        subtitle="Selecione um evento para credenciar, registrar presença e emitir certificados."
+        subtitle={
+          user.role === "ADMIN"
+            ? "Selecione um evento para credenciar, registrar presença e emitir certificados."
+            : "Aqui aparecem somente os eventos atribuídos ao seu usuário."
+        }
         actions={
           <>
-            <Link href={showArchived ? "/" : "/?arquivados=1"} className="btn-secondary">
+            <Link href={archivedHref} className="btn-secondary">
               {showArchived ? "Ver ativos" : "Ver arquivados"}
             </Link>
             {user.role === "ADMIN" ? (
@@ -52,16 +72,38 @@ export default async function EventsPage(props: PageProps<"/">) {
         }
       />
 
+      <form className="card-pad mb-5 flex flex-wrap items-end gap-3" action="/">
+        {showArchived ? <input type="hidden" name="arquivados" value="1" /> : null}
+        <div className="min-w-64 flex-1">
+          <label className="label" htmlFor="q">Buscar evento</label>
+          <input
+            id="q"
+            name="q"
+            className="input"
+            defaultValue={query}
+            placeholder="Nome do evento, local ou organizador"
+          />
+        </div>
+        <button type="submit" className="btn-primary">Buscar</button>
+        {query ? (
+          <Link href={showArchived ? "/?arquivados=1" : "/"} className="btn-secondary">Limpar</Link>
+        ) : null}
+      </form>
+
       {events.length === 0 ? (
         <EmptyState
-          title={showArchived ? "Nenhum evento arquivado" : "Nenhum evento cadastrado"}
+          title={query ? "Nenhum evento encontrado" : showArchived ? "Nenhum evento arquivado" : "Nenhum evento disponível"}
           description={
-            showArchived
-              ? "Eventos arquivados ficam fora da lista principal, mas continuam acessíveis aqui."
-              : "Nenhum evento está disponível no momento."
+            query
+              ? "Tente outro termo de busca."
+              : user.role === "OPERADOR"
+                ? "Nenhum evento foi atribuído ao seu usuário."
+                : showArchived
+                  ? "Eventos arquivados ficam fora da lista principal, mas continuam acessíveis aqui."
+                  : "Nenhum evento está disponível no momento."
           }
           action={
-            showArchived || user.role !== "ADMIN" ? null : (
+            query || showArchived || user.role !== "ADMIN" ? null : (
               <Link href="/eventos/novo" className="btn-primary">Criar evento</Link>
             )
           }
