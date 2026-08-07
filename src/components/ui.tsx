@@ -45,11 +45,13 @@ export function StatCard({
   value,
   hint,
   tone = "default",
+  compact = false,
 }: {
   label: string;
   value: ReactNode;
   hint?: string;
   tone?: "default" | "brand" | "green" | "amber";
+  compact?: boolean;
 }) {
   const tones = {
     default: "text-slate-900",
@@ -59,10 +61,10 @@ export function StatCard({
   } as const;
 
   return (
-    <div className="card-pad">
+    <div className={compact ? "card px-4 py-3" : "card-pad"}>
       <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">{label}</p>
-      <p className={classNames("mt-1 text-3xl font-bold", tones[tone])}>{value}</p>
-      {hint ? <p className="mt-1 text-xs text-slate-400">{hint}</p> : null}
+      <p className={classNames(compact ? "mt-0.5 text-2xl font-bold" : "mt-1 text-3xl font-bold", tones[tone])}>{value}</p>
+      {hint ? <p className={compact ? "mt-0.5 text-[11px] leading-tight text-slate-400" : "mt-1 text-xs text-slate-400"}>{hint}</p> : null}
     </div>
   );
 }
