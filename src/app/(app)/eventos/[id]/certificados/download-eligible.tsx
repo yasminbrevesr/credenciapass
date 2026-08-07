@@ -2,23 +2,32 @@
 
 import { useMemo, useState } from "react";
 
-type EligibleParticipant = { id: string; name: string };
+type CertificateParticipant = {
+  id: string;
+  name: string;
+  qualification: string;
+  attendanceLabel: string;
+  statusLabel: string;
+  eligible: boolean;
+  downloadLabel: string;
+};
 
 export function DownloadEligibleCertificates({
   eventId,
   participants,
 }: {
   eventId: string;
-  participants: EligibleParticipant[];
+  participants: CertificateParticipant[];
 }) {
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(participants.map((participant) => participant.id)));
+  const eligible = useMemo(() => participants.filter((participant) => participant.eligible), [participants]);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(eligible.map((participant) => participant.id)));
   const [progress, setProgress] = useState(0);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
 
   const selectedParticipants = useMemo(
-    () => participants.filter((participant) => selected.has(participant.id)),
-    [participants, selected],
+    () => eligible.filter((participant) => selected.has(participant.id)),
+    [eligible, selected],
   );
 
   function toggle(id: string) {
@@ -31,7 +40,7 @@ export function DownloadEligibleCertificates({
   }
 
   function selectAll() {
-    setSelected(new Set(participants.map((participant) => participant.id)));
+    setSelected(new Set(eligible.map((participant) => participant.id)));
   }
 
   function clearAll() {
@@ -79,26 +88,30 @@ export function DownloadEligibleCertificates({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className="btn-secondary btn-sm" onClick={selectAll} disabled={running}>Selecionar todos</button>
-        <button type="button" className="btn-secondary btn-sm" onClick={clearAll} disabled={running}>Limpar seleção</button>
-        <span className="text-sm text-slate-500">{selected.size} selecionados</span>
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-3">
+        <button type="button" className="btn-secondary btn-sm" onClick={selectAll} disabled={running || eligible.length === 0}>
+          Selecionar todos
+        </button>
+        <button type="button" className="btn-secondary btn-sm" onClick={clearAll} disabled={running || selected.size === 0}>
+          Limpar seleção
+        </button>
+        <span className="text-sm text-slate-500">{selected.size} de {eligible.length} elegíveis selecionados</span>
         <button type="button" className="btn-primary btn-sm ml-auto" onClick={downloadSelected} disabled={running || selected.size === 0}>
           {running ? `Baixando ${progress} de ${selectedParticipants.length}...` : `Baixar selecionados (${selectedParticipants.length})`}
         </button>
       </div>
 
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
-      {!running && progress === selectedParticipants.length && selectedParticipants.length > 0 ? (
-        <p className="text-xs text-emerald-700">Downloads iniciados.</p>
-      ) : null}
 
       <div className="card overflow-x-auto">
         <table className="table">
           <thead>
             <tr>
-              <th className="w-10"></th>
+              <th className="w-10">Sel.</th>
               <th>Nome</th>
+              <th>Qualificação</th>
+              <th>Presenças</th>
+              <th>Situação</th>
               <th></th>
             </tr>
           </thead>
@@ -106,19 +119,33 @@ export function DownloadEligibleCertificates({
             {participants.map((participant) => (
               <tr key={participant.id}>
                 <td>
-                  <input
-                    type="checkbox"
-                    checked={selected.has(participant.id)}
-                    onChange={() => toggle(participant.id)}
-                    disabled={running}
-                    className="h-4 w-4 accent-brand-600"
-                  />
+                  {participant.eligible ? (
+                    <input
+                      type="checkbox"
+                      checked={selected.has(participant.id)}
+                      onChange={() => toggle(participant.id)}
+                      disabled={running}
+                      className="h-4 w-4 accent-brand-600"
+                      aria-label={`Selecionar ${participant.name}`}
+                    />
+                  ) : (
+                    <span className="text-slate-300">—</span>
+                  )}
                 </td>
                 <td className="font-medium text-slate-900">{participant.name}</td>
+                <td className="text-slate-600">{participant.qualification}</td>
+                <td className="text-slate-600">{participant.attendanceLabel}</td>
+                <td>
+                  <span className={participant.eligible ? "badge bg-emerald-50 text-emerald-700" : "badge bg-amber-50 text-amber-700"}>
+                    {participant.statusLabel}
+                  </span>
+                </td>
                 <td className="text-right">
-                  <button type="button" className="btn-secondary btn-sm" onClick={() => toggle(participant.id)} disabled={running}>
-                    {selected.has(participant.id) ? "Remover" : "Selecionar"}
-                  </button>
+                  {participant.eligible ? (
+                    <a href={`/api/eventos/${eventId}/certificados/${participant.id}`} className="btn-secondary btn-sm">
+                      {participant.downloadLabel}
+                    </a>
+                  ) : null}
                 </td>
               </tr>
             ))}
