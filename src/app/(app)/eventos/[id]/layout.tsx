@@ -19,9 +19,7 @@ export default async function EventLayout({ children, params }: LayoutProps<"/ev
   return (
     <div className="space-y-6">
       <div className="no-print">
-        <Link href="/" className="text-sm text-slate-500 hover:text-slate-700">
-          ← Todos os eventos
-        </Link>
+        <Link href="/" className="text-sm text-slate-500 hover:text-slate-700">← Todos os eventos</Link>
 
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">{event.name}</h1>
@@ -36,9 +34,9 @@ export default async function EventLayout({ children, params }: LayoutProps<"/ev
           <NavLink href={base} exact>Visão geral</NavLink>
           <NavLink href={`${base}/participantes`}>Inscritos e crachás</NavLink>
           <NavLink href={`${base}/checkin`}>Check-in</NavLink>
-          {isAdmin ? <NavLink href={`${base}/operadores`}>Operadores</NavLink> : null}
-          {isAdmin ? <NavLink href={`${base}/certificados`}>Certificados</NavLink> : null}
           {isAdmin ? <NavLink href={`${base}/relatorios`}>Relatórios</NavLink> : null}
+          {isAdmin ? <NavLink href={`${base}/certificados`}>Certificados</NavLink> : null}
+          {isAdmin ? <NavLink href={`${base}/operadores`}>Operadores</NavLink> : null}
           {isAdmin ? <NavLink href={`${base}/editar`}>Configurações</NavLink> : null}
         </nav>
       </div>
