@@ -2,10 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SubmitButton } from "@/components/submit-button";
-import { Alert, QualificationBadge, StatCard } from "@/components/ui";
+import { Alert, QualificationBadge } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { classNames, dateOnly, formatDate, formatDateLong, formatDateTime, formatDocument } from "@/lib/utils";
+import { dateOnly, formatDateLong, formatDateTime, formatDocument } from "@/lib/utils";
 
 import { toggleAttendanceAction } from "./actions";
 import { CheckinStation } from "./checkin-station";
@@ -70,8 +70,7 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
     ...(status === "ausentes" ? { attendances: { none: { eventDayId: selectedDay.id } } } : {}),
   };
 
-  const [attendanceCount, matches, recent] = await Promise.all([
-    prisma.attendance.count({ where: { eventDayId: selectedDay.id } }),
+  const [matches, recent] = await Promise.all([
     prisma.participant.findMany({
       where: participantWhere,
       orderBy: { name: "asc" },
@@ -87,43 +86,9 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
   ]);
 
   const base = `/eventos/${id}/checkin`;
-  const pending = event._count.participants - attendanceCount;
 
   return (
     <div className="space-y-6">
-      <div className="card-pad no-print">
-        <p className="label">Dia do evento</p>
-        <div className="flex flex-wrap gap-2">
-          {event.days.map((day) => {
-            const active = day.id === selectedDay.id;
-            const isToday = dateOnly(day.date).getTime() === todayTime;
-            return (
-              <Link
-                key={day.id}
-                href={`${base}?dia=${day.id}`}
-                className={classNames(
-                  "rounded-lg border px-3 py-1.5 text-sm font-medium transition",
-                  active
-                    ? "border-brand-600 bg-brand-600 text-white"
-                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
-                )}
-              >
-                {formatDate(day.date)}
-                {isToday ? (
-                  <span className={classNames("ml-1 text-xs", active ? "text-brand-100" : "text-emerald-600")}>hoje</span>
-                ) : null}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Presentes" value={attendanceCount} tone="green" hint={formatDateLong(selectedDay.date)} />
-        <StatCard label="Faltantes" value={pending < 0 ? 0 : pending} tone="amber" />
-        <StatCard label="Inscritos" value={event._count.participants} />
-      </div>
-
       <CheckinStation eventId={id} eventDayId={selectedDay.id} dayLabel={formatDateLong(selectedDay.date)} />
 
       <section className="card-pad">
