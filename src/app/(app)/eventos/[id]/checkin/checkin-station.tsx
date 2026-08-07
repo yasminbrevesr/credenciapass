@@ -30,7 +30,7 @@ function beep(ok: boolean) {
   } catch {}
 }
 
-export function CheckinStation({ eventId, eventDayId, dayLabel }: { eventId: string; eventDayId: string; dayLabel: string }) {
+export function CheckinStation({ eventId, eventDayId }: { eventId: string; eventDayId: string }) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<CheckInResult | null>(null);
@@ -112,7 +112,7 @@ export function CheckinStation({ eventId, eventDayId, dayLabel }: { eventId: str
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Leitura do crachá</h2>
-            <p className="text-sm text-slate-500">Presença de {dayLabel}</p>
+            <p className="text-sm text-slate-500">Escaneie o QR-Code ou informe o código do crachá.</p>
           </div>
           <button type="button" className="btn-secondary btn-sm" onClick={() => { setCameraError(""); setCameraOn((current) => !current); }}>
             {cameraOn ? "Cancelar leitura" : "Escanear QR-Code"}
@@ -151,7 +151,7 @@ export function CheckinStation({ eventId, eventDayId, dayLabel }: { eventId: str
           <button type="button" className="btn-secondary btn-sm" onClick={() => void refreshHistory()}>Atualizar</button>
         </div>
 
-        {history.length === 0 ? <p className="text-sm text-slate-500">Nenhuma presença registrada neste dia.</p> : (
+        {history.length === 0 ? <p className="text-sm text-slate-500">Nenhuma presença registrada.</p> : (
           <ul className="divide-y divide-slate-100">
             {history.map((item) => (
               <li key={item.id} className="flex items-center justify-between gap-3 py-2.5">
