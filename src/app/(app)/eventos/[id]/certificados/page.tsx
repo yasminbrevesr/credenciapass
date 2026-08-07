@@ -2,14 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Alert, QualificationBadge } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatDate, parseQualifications } from "@/lib/utils";
 
 export const metadata = { title: "Certificados" };
 
 export default async function CertificatesPage(props: PageProps<"/eventos/[id]/certificados">) {
-  await requireUser();
+  await requireAdmin();
   const { id } = await props.params;
   const searchParams = await props.searchParams;
 
@@ -49,30 +49,21 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
             } para emitir o certificado.`
           : "Todos os inscritos podem receber certificado (nenhuma presença mínima exigida)."}{" "}
         O texto do certificado é configurado em{" "}
-        <Link href={`/eventos/${id}/editar`} className="underline">
-          Configurações
-        </Link>
-        .
+        <Link href={`/eventos/${id}/editar`} className="underline">Configurações</Link>.
       </Alert>
 
       <div className="card-pad flex flex-wrap items-end gap-3">
         <form className="flex flex-wrap items-end gap-3" action={`/eventos/${id}/certificados`}>
           <div className="w-56">
-            <label className="label" htmlFor="qualificacao">
-              Qualificação
-            </label>
+            <label className="label" htmlFor="qualificacao">Qualificação</label>
             <select id="qualificacao" name="qualificacao" className="input" defaultValue={qualification}>
               <option value="">Todas</option>
               {parseQualifications(event.qualifications).map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
+                <option key={option} value={option}>{option}</option>
               ))}
             </select>
           </div>
-          <button type="submit" className="btn-secondary">
-            Filtrar
-          </button>
+          <button type="submit" className="btn-secondary">Filtrar</button>
         </form>
 
         <a href={batchHref} target="_blank" rel="noreferrer" className="btn-primary ml-auto">
@@ -108,9 +99,7 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
                       {participant.name}
                     </Link>
                   </td>
-                  <td>
-                    <QualificationBadge value={participant.qualification} />
-                  </td>
+                  <td><QualificationBadge value={participant.qualification} /></td>
                   <td className="text-slate-600">
                     {participant._count.attendances} de {event._count.days}
                   </td>
