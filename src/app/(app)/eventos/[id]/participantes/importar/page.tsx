@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Alert } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 import { importParticipantsAction } from "./actions";
@@ -12,7 +12,7 @@ export const metadata = { title: "Importar inscritos" };
 export default async function ImportParticipantsPage(
   props: PageProps<"/eventos/[id]/participantes/importar">,
 ) {
-  await requireUser();
+  await requireAdmin();
   const { id } = await props.params;
   const searchParams = await props.searchParams;
   const event = await prisma.event.findUnique({ where: { id } });
@@ -52,9 +52,7 @@ export default async function ImportParticipantsPage(
         <form action={importParticipantsAction} className="space-y-4">
           <input type="hidden" name="eventId" value={id} />
           <div>
-            <label className="label" htmlFor="file">
-              Planilha Excel
-            </label>
+            <label className="label" htmlFor="file">Planilha Excel</label>
             <input
               id="file"
               name="file"
@@ -65,12 +63,8 @@ export default async function ImportParticipantsPage(
             />
           </div>
           <div className="flex gap-2">
-            <button type="submit" className="btn-primary">
-              Importar inscritos
-            </button>
-            <Link href={`/eventos/${id}/participantes`} className="btn-secondary">
-              Voltar
-            </Link>
+            <button type="submit" className="btn-primary">Importar inscritos</button>
+            <Link href={`/eventos/${id}/participantes`} className="btn-secondary">Voltar</Link>
           </div>
         </form>
       </div>
