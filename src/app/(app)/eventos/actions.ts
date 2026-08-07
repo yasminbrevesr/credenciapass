@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireAdmin, requireUser } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { dateOnly, eachDay, serializeQualifications } from "@/lib/utils";
 
@@ -63,7 +63,6 @@ function readForm(formData: FormData): EventInput | string {
   };
 }
 
-/** Cria/remove os dias do evento para bater com o período informado. */
 async function syncEventDays(eventId: string, startDate: Date, endDate: Date) {
   const wanted = eachDay(startDate, endDate);
   const wantedTimes = new Set(wanted.map((day) => day.getTime()));
@@ -87,7 +86,7 @@ export async function createEventAction(
   _prev: EventFormState,
   formData: FormData,
 ): Promise<EventFormState> {
-  await requireUser();
+  await requireAdmin();
   const parsed = readForm(formData);
   if (typeof parsed === "string") return { error: parsed };
 
@@ -102,7 +101,7 @@ export async function updateEventAction(
   _prev: EventFormState,
   formData: FormData,
 ): Promise<EventFormState> {
-  await requireUser();
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Evento não encontrado." };
 
@@ -118,7 +117,7 @@ export async function updateEventAction(
 }
 
 export async function toggleArchiveEventAction(formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const event = await prisma.event.findUnique({ where: { id } });
   if (!event) return;
