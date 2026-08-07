@@ -68,11 +68,11 @@ export default async function ParticipantsPage(props: PageProps<"/eventos/[id]/p
             {total} {total === 1 ? "inscrito" : "inscritos"}
             {query || qualification ? " encontrados" : ""}
           </p>
-          <p className="text-xs text-slate-400">Consulte inscritos e gere os crachás com QR Code no mesmo fluxo.</p>
+          <p className="text-xs text-slate-400">Consulte inscritos e gere etiquetas para os crachás no mesmo fluxo.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href={`/eventos/${id}/etiquetas`} className="btn-primary btn-sm">
-            Gerar crachás / QR Codes
+            Imprimir etiquetas
           </Link>
           {user.role === "ADMIN" ? (
             <>
@@ -144,13 +144,13 @@ export default async function ParticipantsPage(props: PageProps<"/eventos/[id]/p
                     <Link href={`${base}/${participant.id}`} className="font-medium text-slate-900 hover:text-brand-600">
                       {participant.name}
                     </Link>
-                    {participant.organization ? <p className="text-xs text-slate-500">{participant.organization}</p> : null}
+                    <p className="text-xs text-slate-500">{participant.organization || "S/N"}</p>
                   </td>
-                  <td className="text-slate-600">{formatDocument(participant.document)}</td>
-                  <td><QualificationBadge value={participant.qualification} /></td>
+                  <td className="text-slate-600">{formatDocument(participant.document) || "S/N"}</td>
+                  <td><QualificationBadge value={participant.qualification || "S/N"} /></td>
                   <td className="text-slate-600">
-                    {participant.email ? <p>{participant.email}</p> : null}
-                    {participant.phone ? <p className="text-xs text-slate-500">{formatPhone(participant.phone)}</p> : null}
+                    <p>{participant.email || "S/N"}</p>
+                    <p className="text-xs text-slate-500">{formatPhone(participant.phone) || "S/N"}</p>
                   </td>
                   <td className="text-slate-600">{participant._count.attendances}</td>
                   <td className="text-right whitespace-nowrap">
