@@ -20,8 +20,9 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  checkins     Attendance[]
-  certificates Certificate[]
+  checkins      Attendance[]
+  certificates  Certificate[]
+  eventAccesses EventAccess[]
 }
 
 /// Evento que será credenciado. Os dias vêm em EventDay (a presença é por dia).
@@ -43,8 +44,23 @@ model Event {
 
   days         EventDay[]
   participants Participant[]
+  accesses     EventAccess[]
 
   @@index([archived, startDate])
+}
+
+/// Define a quais eventos cada operador pode acessar.
+model EventAccess {
+  id        String   @id @default(cuid())
+  userId    String
+  eventId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([eventId])
 }
 
 model EventDay {
