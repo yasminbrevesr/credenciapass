@@ -61,8 +61,8 @@ export async function importParticipantsAction(formData: FormData) {
   }
 
   const workbook = new ExcelJS.Workbook();
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  await workbook.xlsx.read(Readable.from(bytes));
+  const fileBuffer = Buffer.from(await file.arrayBuffer());
+  await workbook.xlsx.read(Readable.from([fileBuffer]));
   const worksheet = workbook.worksheets[0];
   if (!worksheet) redirectError(eventId, "Planilha vazia.");
   if (worksheet.rowCount > MAX_ROWS + 1) {
@@ -95,7 +95,6 @@ export async function importParticipantsAction(formData: FormData) {
     notes: string | null;
   }> = [];
 
-  // Remove duplicidades dentro da própria planilha antes de tocar no banco.
   const seenDocuments = new Set<string>();
 
   for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber += 1) {
@@ -139,9 +138,6 @@ export async function importParticipantsAction(formData: FormData) {
     redirect(`/eventos/${eventId}/participantes/importar?importados=0&duplicados=${skipped}&invalidos=${invalid}`);
   }
 
-  // Uma única consulta descobre quais documentos já existem neste evento.
-  // Isso evita centenas/milhares de INSERTs individuais e reduz drasticamente
-  // o tempo de execução em ambientes serverless como a Vercel.
   const existing = await prisma.participant.findMany({
     where: {
       eventId,
