@@ -51,7 +51,8 @@ export async function importParticipantsAction(formData: FormData) {
   }
 
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(Buffer.from(await file.arrayBuffer()));
+  const arrayBuffer = await file.arrayBuffer();
+  await workbook.xlsx.load(arrayBuffer);
   const worksheet = workbook.worksheets[0];
   if (!worksheet) {
     redirect(`/eventos/${eventId}/participantes/importar?erro=Planilha+vazia`);
