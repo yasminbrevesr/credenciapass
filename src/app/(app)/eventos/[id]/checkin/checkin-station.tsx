@@ -11,6 +11,8 @@ import {
   type RecentCheckIn,
 } from "./actions";
 
+const HISTORY_REFRESH_MS = 10_000;
+
 function beep(ok: boolean) {
   try {
     const AudioContextClass =
@@ -30,24 +32,53 @@ function beep(ok: boolean) {
   } catch {}
 }
 
-export function CheckinStation({ eventId, eventDayId }: { eventId: string; eventDayId: string }) {
+export function CheckinStation({
+  eventId,
+  eventDayId,
+  initialHistory = [],
+}: {
+  eventId: string;
+  eventDayId: string;
+  initialHistory?: RecentCheckIn[];
+}) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<CheckInResult | null>(null);
-  const [history, setHistory] = useState<RecentCheckIn[]>([]);
+  const [history, setHistory] = useState<RecentCheckIn[]>(initialHistory);
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const scanLockedRef = useRef(false);
+  const refreshingHistoryRef = useRef(false);
 
   async function refreshHistory() {
-    try { setHistory(await getRecentCheckIns(eventId, eventDayId)); } catch {}
+    if (refreshingHistoryRef.current) return;
+    refreshingHistoryRef.current = true;
+    try {
+      setHistory(await getRecentCheckIns(eventId, eventDayId));
+    } catch {
+      // Mantém o histórico atual se uma atualização em segundo plano falhar.
+    } finally {
+      refreshingHistoryRef.current = false;
+    }
   }
 
   useEffect(() => {
-    void refreshHistory();
-    const timer = window.setInterval(() => void refreshHistory(), 3000);
-    return () => window.clearInterval(timer);
+    setHistory(initialHistory);
+  }, [eventDayId, initialHistory]);
+
+  useEffect(() => {
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "visible") void refreshHistory();
+    };
+
+    const timer = window.setInterval(refreshIfVisible, HISTORY_REFRESH_MS);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+    };
   }, [eventId, eventDayId]);
 
   async function submitCode(value: string, method: "QRCODE" | "MANUAL") {
@@ -146,7 +177,7 @@ export function CheckinStation({ eventId, eventDayId }: { eventId: string; event
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Últimas leituras</h2>
-            <p className="text-xs text-slate-400">Atualização automática a cada 3 segundos</p>
+            <p className="text-xs text-slate-400">Atualização automática a cada 10 segundos</p>
           </div>
           <button type="button" className="btn-secondary btn-sm" onClick={() => void refreshHistory()}>Atualizar</button>
         </div>
