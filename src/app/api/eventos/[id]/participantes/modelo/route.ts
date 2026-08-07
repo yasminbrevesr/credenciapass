@@ -15,8 +15,8 @@ export async function GET() {
     { header: "E-mail", key: "email", width: 30 },
     { header: "Telefone", key: "phone", width: 18 },
     { header: "Qualificação", key: "qualification", width: 18 },
-    { header: "Instituição", key: "organization", width: 28 },
-    { header: "Cargo", key: "position", width: 22 },
+    { header: "Instituição / empresa", key: "organization", width: 30 },
+    { header: "Cargo / função", key: "position", width: 24 },
     { header: "Observações", key: "notes", width: 32 },
   ];
   sheet.addRow({
@@ -25,7 +25,7 @@ export async function GET() {
     email: "maria@exemplo.com",
     phone: "(11) 99999-9999",
     qualification: "Participante",
-    organization: "Instituição Exemplo",
+    organization: "Empresa Exemplo",
     position: "Analista",
     notes: "",
   });
