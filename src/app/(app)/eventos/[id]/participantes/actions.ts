@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireAdmin, requireUser } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
   formatDocument,
@@ -82,7 +82,7 @@ export async function updateParticipantAction(
   _prev: ParticipantFormState,
   formData: FormData,
 ): Promise<ParticipantFormState> {
-  await requireUser();
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const eventId = String(formData.get("eventId") ?? "");
   const parsed = readForm(formData);
@@ -113,8 +113,7 @@ export async function deleteParticipantAction(formData: FormData) {
 }
 
 export async function regenerateCodeAction(formData: FormData) {
-  const user = await requireUser();
-  if (user.role !== "ADMIN") return;
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const eventId = String(formData.get("eventId") ?? "");
 
