@@ -4,9 +4,9 @@ import ExcelJS from "exceljs";
 import { redirect } from "next/navigation";
 import { Readable } from "node:stream";
 
-import { requireUser } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { generateCode } from "@/lib/utils";
+import { formatDocument, formatPhone, generateCode, normalizeEmail, titleCase } from "@/lib/utils";
 
 const HEADER_ALIASES: Record<string, string> = {
   nome: "name",
@@ -30,9 +30,7 @@ const HEADER_ALIASES: Record<string, string> = {
 };
 
 function normalize(value: unknown) {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase();
+  return String(value ?? "").trim().toLowerCase();
 }
 
 function cellText(value: ExcelJS.CellValue) {
@@ -43,7 +41,7 @@ function cellText(value: ExcelJS.CellValue) {
 }
 
 export async function importParticipantsAction(formData: FormData) {
-  await requireUser();
+  await requireAdmin();
   const eventId = String(formData.get("eventId") ?? "");
   const file = formData.get("file");
 
@@ -55,9 +53,7 @@ export async function importParticipantsAction(formData: FormData) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   await workbook.xlsx.read(Readable.from(bytes));
   const worksheet = workbook.worksheets[0];
-  if (!worksheet) {
-    redirect(`/eventos/${eventId}/participantes/importar?erro=Planilha+vazia`);
-  }
+  if (!worksheet) redirect(`/eventos/${eventId}/participantes/importar?erro=Planilha+vazia`);
 
   const headerMap = new Map<number, string>();
   worksheet.getRow(1).eachCell((cell, col) => {
@@ -66,11 +62,7 @@ export async function importParticipantsAction(formData: FormData) {
   });
 
   if (![...headerMap.values()].includes("name") || ![...headerMap.values()].includes("document")) {
-    redirect(
-      `/eventos/${eventId}/participantes/importar?erro=${encodeURIComponent(
-        "A planilha precisa ter as colunas Nome e Documento.",
-      )}`,
-    );
+    redirect(`/eventos/${eventId}/participantes/importar?erro=${encodeURIComponent("A planilha precisa ter as colunas Nome e Documento.")}`);
   }
 
   let imported = 0;
@@ -88,37 +80,28 @@ export async function importParticipantsAction(formData: FormData) {
       continue;
     }
 
+    const phone = data.phone ? formatPhone(data.phone) : null;
     try {
       await prisma.participant.create({
         data: {
           eventId,
           code: generateCode(),
-          name: data.name,
-          document: data.document,
-          email: data.email || null,
-          phone: data.phone || null,
-          qualification: data.qualification || "Participante",
-          organization: data.organization || null,
-          position: data.position || null,
-          notes: data.notes || null,
+          name: titleCase(data.name),
+          document: formatDocument(data.document),
+          email: normalizeEmail(data.email),
+          phone: phone || null,
+          qualification: data.qualification?.trim() || "Participante",
+          organization: data.organization ? titleCase(data.organization) : null,
+          position: data.position ? titleCase(data.position) : null,
+          notes: data.notes?.trim() || null,
         },
       });
       imported += 1;
     } catch (error) {
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        (error as { code?: string }).code === "P2002"
-      ) {
-        skipped += 1;
-      } else {
-        throw error;
-      }
+      if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "P2002") skipped += 1;
+      else throw error;
     }
   }
 
-  redirect(
-    `/eventos/${eventId}/participantes/importar?importados=${imported}&duplicados=${skipped}&invalidos=${invalid}`,
-  );
+  redirect(`/eventos/${eventId}/participantes/importar?importados=${imported}&duplicados=${skipped}&invalidos=${invalid}`);
 }
