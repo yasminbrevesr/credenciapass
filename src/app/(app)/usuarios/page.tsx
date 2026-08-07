@@ -7,27 +7,20 @@ import { formatDate } from "@/lib/utils";
 import { deleteUserAction } from "./actions";
 import { EditUserForm, NewUserForm } from "./user-forms";
 
-export const metadata = { title: "Usuários" };
+export const metadata = { title: "Administradores" };
 
 export default async function UsersPage() {
   const admin = await requireAdmin();
-  const [users, events] = await Promise.all([
-    prisma.user.findMany({
-      orderBy: { name: "asc" },
-      include: { eventAccesses: { select: { eventId: true } } },
-    }),
-    prisma.event.findMany({
-      where: { archived: false },
-      orderBy: { startDate: "desc" },
-      select: { id: true, name: true },
-    }),
-  ]);
+  const users = await prisma.user.findMany({
+    where: { role: "ADMIN" },
+    orderBy: { name: "asc" },
+  });
 
   return (
     <>
       <PageHeader
-        title="Usuários"
-        subtitle="Cadastre operadores e defina exatamente quais eventos cada um pode acessar."
+        title="Administradores"
+        subtitle="Gerencie apenas acessos administrativos. Operadores são cadastrados dentro de cada evento, na aba Operadores."
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -39,18 +32,9 @@ export default async function UsersPage() {
                   <div>
                     <p className="font-medium text-slate-900">
                       {user.name}
-                      {user.id === admin.id ? (
-                        <span className="ml-2 text-xs text-slate-400">(você)</span>
-                      ) : null}
+                      {user.id === admin.id ? <span className="ml-2 text-xs text-slate-400">(você)</span> : null}
                     </p>
                     <p className="text-sm text-slate-500">{user.email}</p>
-                    {user.role === "OPERADOR" ? (
-                      <p className="mt-1 text-xs text-slate-400">
-                        {user.eventAccesses.length === 0
-                          ? "Nenhum evento atribuído"
-                          : `${user.eventAccesses.length} ${user.eventAccesses.length === 1 ? "evento atribuído" : "eventos atribuídos"}`}
-                      </p>
-                    ) : null}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-slate-400">criado em {formatDate(user.createdAt)}</span>
@@ -60,7 +44,7 @@ export default async function UsersPage() {
                         <SubmitButton
                           className="btn-danger btn-sm"
                           pendingLabel="..."
-                          confirm={`Excluir o usuário ${user.name}?`}
+                          confirm={`Excluir o administrador ${user.name}?`}
                         >
                           Excluir
                         </SubmitButton>
@@ -70,14 +54,11 @@ export default async function UsersPage() {
                 </div>
 
                 <EditUserForm
-                  events={events}
                   user={{
                     id: user.id,
                     name: user.name,
                     email: user.email,
-                    role: user.role,
                     active: user.active,
-                    eventIds: user.eventAccesses.map((access) => access.eventId),
                   }}
                 />
               </div>
@@ -85,7 +66,7 @@ export default async function UsersPage() {
           </div>
         </div>
 
-        <NewUserForm events={events} />
+        <NewUserForm />
       </div>
     </>
   );
