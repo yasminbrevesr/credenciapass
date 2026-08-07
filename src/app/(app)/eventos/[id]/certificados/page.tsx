@@ -6,6 +6,8 @@ import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatDate, parseQualifications } from "@/lib/utils";
 
+import { DownloadEligibleCertificates } from "./download-eligible";
+
 export const metadata = { title: "Certificados" };
 
 export default async function CertificatesPage(props: PageProps<"/eventos/[id]/certificados">) {
@@ -33,10 +35,6 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
 
   const eligible = participants.filter((participant) => participant._count.attendances >= requiredDays);
 
-  const batchParams = new URLSearchParams();
-  if (qualification) batchParams.set("qualificacao", qualification);
-  const batchHref = `/api/eventos/${id}/certificados${batchParams.toString() ? `?${batchParams}` : ""}`;
-
   return (
     <div className="space-y-4">
       <Alert tone="info">
@@ -60,9 +58,10 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
         </form>
 
         {eligible.length > 0 ? (
-          <a href={batchHref} target="_blank" rel="noreferrer" className="btn-primary ml-auto">
-            Gerar PDF dos elegíveis ({eligible.length})
-          </a>
+          <DownloadEligibleCertificates
+            eventId={id}
+            participants={eligible.map((participant) => ({ id: participant.id, name: participant.name }))}
+          />
         ) : (
           <button type="button" className="btn-secondary ml-auto" disabled>Nenhum elegível</button>
         )}
@@ -113,11 +112,9 @@ export default async function CertificatesPage(props: PageProps<"/eventos/[id]/c
                     {ok ? (
                       <a
                         href={`/api/eventos/${id}/certificados/${participant.id}`}
-                        target="_blank"
-                        rel="noreferrer"
                         className="btn-secondary btn-sm"
                       >
-                        {certificate ? "Baixar novamente" : "Emitir PDF"}
+                        {certificate ? "Baixar novamente" : "Baixar certificado"}
                       </a>
                     ) : null}
                   </td>
