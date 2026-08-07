@@ -10,6 +10,8 @@ import {
 } from "@/lib/reports";
 import { formatDate, formatDateTime, formatDocument } from "@/lib/utils";
 
+import { ReportExportMenu } from "./export-menu";
+
 export const metadata = { title: "Relatórios" };
 
 type StatusFilter = "todos" | "ausentes";
@@ -59,6 +61,10 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <ReportExportMenu eventId={id} />
+      </div>
+
       <section
         className="relative overflow-hidden rounded-[28px] border border-brand-300/20 p-5 text-white shadow-2xl shadow-black/20 sm:p-6"
         style={{
