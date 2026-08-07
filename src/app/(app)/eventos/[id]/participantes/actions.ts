@@ -5,13 +5,19 @@ import { redirect } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { generateCode } from "@/lib/utils";
+import {
+  formatDocument,
+  formatPhone,
+  generateCode,
+  normalizeEmail,
+  titleCase,
+} from "@/lib/utils";
 
 export type ParticipantFormState = { error?: string };
 
 function readForm(formData: FormData) {
-  const name = String(formData.get("name") ?? "").trim();
-  const document = String(formData.get("document") ?? "").trim();
+  const name = titleCase(String(formData.get("name") ?? ""));
+  const document = formatDocument(String(formData.get("document") ?? ""));
 
   if (!name) return "Informe o nome do participante.";
   if (!document) return "Informe o documento de identificação.";
@@ -21,19 +27,22 @@ function readForm(formData: FormData) {
     return value ? value : null;
   };
 
+  const organization = text("organization");
+  const position = text("position");
+  const phone = text("phone");
+
   return {
     name,
     document,
-    email: text("email"),
-    phone: text("phone"),
+    email: normalizeEmail(text("email")),
+    phone: phone ? formatPhone(phone) : null,
     qualification: String(formData.get("qualification") ?? "Participante").trim() || "Participante",
-    organization: text("organization"),
-    position: text("position"),
+    organization: organization ? titleCase(organization) : null,
+    position: position ? titleCase(position) : null,
     notes: text("notes"),
   };
 }
 
-/** Prisma sinaliza documento repetido no mesmo evento com o código P2002. */
 function isDuplicateDocument(error: unknown) {
   return (
     typeof error === "object" &&
@@ -67,7 +76,6 @@ export async function createParticipantAction(
   revalidatePath(`/eventos/${eventId}/participantes`);
   revalidatePath(`/eventos/${eventId}`);
 
-  // "Salvar e cadastrar outro" volta para o formulário vazio.
   if (formData.get("intent") === "save-and-new") {
     redirect(`/eventos/${eventId}/participantes/novo?ok=${encodeURIComponent(created.name)}`);
   }
@@ -110,7 +118,6 @@ export async function deleteParticipantAction(formData: FormData) {
   redirect(`/eventos/${eventId}/participantes`);
 }
 
-/** Gera um novo código de crachá (usado quando o crachá é perdido/reimpresso). */
 export async function regenerateCodeAction(formData: FormData) {
   await requireUser();
   const id = String(formData.get("id") ?? "");
