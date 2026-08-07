@@ -5,7 +5,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { Alert, QualificationBadge } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { dateOnly, formatDateLong, formatDateTime, formatDocument } from "@/lib/utils";
+import { dateOnly, formatDateTime, formatDocument } from "@/lib/utils";
 
 import { toggleAttendanceAction } from "./actions";
 import { CheckinStation } from "./checkin-station";
@@ -89,7 +89,7 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
 
   return (
     <div className="space-y-6">
-      <CheckinStation eventId={id} eventDayId={selectedDay.id} dayLabel={formatDateLong(selectedDay.date)} />
+      <CheckinStation eventId={id} eventDayId={selectedDay.id} />
 
       <section className="card-pad">
         <h2 className="mb-3 text-sm font-semibold tracking-wide text-slate-500 uppercase">
@@ -100,13 +100,7 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
           <input type="hidden" name="dia" value={selectedDay.id} />
           <div>
             <label className="label" htmlFor="q">Buscar inscrito</label>
-            <input
-              id="q"
-              name="q"
-              className="input"
-              defaultValue={query}
-              placeholder="Digite parte do nome, CPF ou e-mail"
-            />
+            <input id="q" name="q" className="input" defaultValue={query} placeholder="Digite parte do nome, CPF ou e-mail" />
           </div>
           <div>
             <label className="label" htmlFor="situacao">Situação</label>
@@ -122,15 +116,7 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
 
         <div className="mt-4 max-h-[30rem] overflow-auto rounded-lg border border-slate-200">
           <table className="table">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>CPF / Documento</th>
-                <th>Qualificação</th>
-                <th>Situação</th>
-                <th></th>
-              </tr>
-            </thead>
+            <thead><tr><th>Nome</th><th>CPF / Documento</th><th>Qualificação</th><th>Situação</th><th></th></tr></thead>
             <tbody>
               {matches.map((participant) => {
                 const attendance = participant.attendances[0];
@@ -139,9 +125,7 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
                     <td className="font-medium text-slate-900">{participant.name}</td>
                     <td className="text-slate-600">{formatDocument(participant.document)}</td>
                     <td><QualificationBadge value={participant.qualification} /></td>
-                    <td className="text-slate-600">
-                      {attendance ? `Presente (${formatDateTime(attendance.checkedInAt)})` : "Ausente"}
-                    </td>
+                    <td className="text-slate-600">{attendance ? `Presente (${formatDateTime(attendance.checkedInAt)})` : "Ausente"}</td>
                     <td className="text-right">
                       {attendance ? (
                         user.role === "ADMIN" ? (
@@ -151,9 +135,7 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
                             <input type="hidden" name="eventDayId" value={selectedDay.id} />
                             <SubmitButton className="btn-secondary btn-sm" pendingLabel="...">Desfazer</SubmitButton>
                           </form>
-                        ) : (
-                          <span className="text-xs font-medium text-emerald-700">Confirmado</span>
-                        )
+                        ) : <span className="text-xs font-medium text-emerald-700">Confirmado</span>
                       ) : (
                         <form action={toggleAttendanceAction}>
                           <input type="hidden" name="eventId" value={id} />
@@ -179,15 +161,11 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Presenças registradas hoje</h2>
           {user.role === "ADMIN" ? (
-            <Link href={`/eventos/${id}/relatorios?dia=${selectedDay.id}#detalhe-dia`} className="text-sm text-brand-600 hover:underline">
-              Ver relatório completo
-            </Link>
+            <Link href={`/eventos/${id}/relatorios?dia=${selectedDay.id}#detalhe-dia`} className="text-sm text-brand-600 hover:underline">Ver relatório completo</Link>
           ) : null}
         </div>
 
-        {recent.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhuma presença registrada neste dia.</p>
-        ) : (
+        {recent.length === 0 ? <p className="text-sm text-slate-500">Nenhuma presença registrada neste dia.</p> : (
           <ul className="divide-y divide-slate-100">
             {recent.map((attendance) => (
               <li key={attendance.id} className="flex items-center justify-between gap-3 py-2">
