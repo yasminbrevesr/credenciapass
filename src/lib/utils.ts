@@ -2,10 +2,6 @@
 
 const TZ = "America/Sao_Paulo";
 
-/**
- * Datas de dias de evento são guardadas como "meio-dia UTC" do dia escolhido.
- * Isso evita que o fuso horário empurre a data para o dia anterior/seguinte.
- */
 export function dateOnly(value: string | Date): Date {
   if (value instanceof Date) {
     return new Date(
@@ -16,7 +12,6 @@ export function dateOnly(value: string | Date): Date {
   return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
 }
 
-/** Formato aceito por <input type="date"> (YYYY-MM-DD). */
 export function toInputDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
@@ -47,7 +42,6 @@ export function formatPeriod(start: Date, end: Date): string {
     : `${formatDateLong(start)} a ${formatDateLong(end)}`;
 }
 
-/** Lista todos os dias entre duas datas (inclusive), normalizados por dateOnly. */
 export function eachDay(start: Date, end: Date): Date[] {
   const days: Date[] = [];
   const cursor = dateOnly(start);
@@ -59,9 +53,8 @@ export function eachDay(start: Date, end: Date): Date[] {
   return days;
 }
 
-const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sem I, O, 0 e 1
+const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-/** Código curto e legível usado no QR Code / código de barras do crachá. */
 export function generateCode(prefix = "CP"): string {
   let body = "";
   for (let i = 0; i < 8; i += 1) {
@@ -82,7 +75,25 @@ export function onlyDigits(value: string): string {
   return value.replace(/\D+/g, "");
 }
 
-/** Formata CPF/CNPJ quando o documento parece ser um deles; senão devolve como veio. */
+const LOWERCASE_NAME_WORDS = new Set(["da", "das", "de", "do", "dos", "e"]);
+
+/** Padroniza nomes e textos curtos, preservando conectivos comuns em minúsculo. */
+export function titleCase(value: string): string {
+  return value
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase("pt-BR")
+    .split(" ")
+    .map((word, index) => {
+      if (index > 0 && LOWERCASE_NAME_WORDS.has(word)) return word;
+      return word
+        .split("-")
+        .map((part) => (part ? part.charAt(0).toLocaleUpperCase("pt-BR") + part.slice(1) : part))
+        .join("-");
+    })
+    .join(" ");
+}
+
 export function formatDocument(value: string): string {
   const digits = onlyDigits(value);
   if (digits.length === 11) {
@@ -91,7 +102,7 @@ export function formatDocument(value: string): string {
   if (digits.length === 14) {
     return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
   }
-  return value;
+  return value.trim();
 }
 
 export function formatPhone(value?: string | null): string {
@@ -99,7 +110,12 @@ export function formatPhone(value?: string | null): string {
   const digits = onlyDigits(value);
   if (digits.length === 11) return digits.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
   if (digits.length === 10) return digits.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
-  return value;
+  return value.trim();
+}
+
+export function normalizeEmail(value?: string | null): string | null {
+  const normalized = value?.trim().toLocaleLowerCase("pt-BR") ?? "";
+  return normalized || null;
 }
 
 export function parseQualifications(raw: string): string[] {
@@ -109,15 +125,12 @@ export function parseQualifications(raw: string): string[] {
       const list = parsed.map((item) => String(item).trim()).filter(Boolean);
       if (list.length > 0) return list;
     }
-  } catch {
-    // valor inválido no banco: cai no padrão abaixo
-  }
+  } catch {}
   return DEFAULT_QUALIFICATIONS;
 }
 
 export const DEFAULT_QUALIFICATIONS = ["Participante", "Professor", "Colaborador"];
 
-/** Converte o texto do textarea de qualificações (uma por linha) em JSON. */
 export function serializeQualifications(raw: string): string {
   const list = raw
     .split(/[\n,;]/)
@@ -130,7 +143,6 @@ export function classNames(...values: Array<string | false | null | undefined>):
   return values.filter(Boolean).join(" ");
 }
 
-/** Slug simples usado em nomes de arquivos exportados. */
 export function slugify(value: string): string {
   return normalizeText(value)
     .replace(/[^a-z0-9]+/g, "-")
