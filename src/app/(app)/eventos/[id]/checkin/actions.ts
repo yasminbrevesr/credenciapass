@@ -133,6 +133,7 @@ export async function toggleAttendanceAction(formData: FormData) {
   });
 
   if (existing) {
+    if (user.role !== "ADMIN") return;
     await prisma.attendance.delete({ where: { id: existing.id } });
   } else {
     await prisma.attendance.create({
