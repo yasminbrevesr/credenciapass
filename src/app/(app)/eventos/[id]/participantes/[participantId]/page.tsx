@@ -14,7 +14,7 @@ import { deleteParticipantAction, regenerateCodeAction } from "../actions";
 export default async function ParticipantPage(
   props: PageProps<"/eventos/[id]/participantes/[participantId]">,
 ) {
-  await requireUser();
+  const user = await requireUser();
   const { id, participantId } = await props.params;
 
   const participant = await prisma.participant.findFirst({
@@ -59,21 +59,23 @@ export default async function ParticipantPage(
           </div>
 
           <dl className="mt-5 grid gap-4 sm:grid-cols-2">
-            <Field label="Documento" value={formatDocument(participant.document)} />
+            <Field label="CPF / Documento" value={formatDocument(participant.document)} />
             <Field label="Código do crachá" value={participant.code} mono />
             <Field label="E-mail" value={participant.email ?? "—"} />
             <Field label="Celular" value={formatPhone(participant.phone) || "—"} />
             <Field label="Instituição / empresa" value={participant.organization ?? "—"} />
             <Field label="Cargo / função" value={participant.position ?? "—"} />
             <Field label="Inscrito em" value={formatDateTime(participant.createdAt)} />
-            <Field
-              label="Certificado"
-              value={
-                participant.certificates.length > 0
-                  ? `Emitido (${participant.certificates[0].code})`
-                  : "Não emitido"
-              }
-            />
+            {user.role === "ADMIN" ? (
+              <Field
+                label="Certificado"
+                value={
+                  participant.certificates.length > 0
+                    ? `Emitido (${participant.certificates[0].code})`
+                    : "Não emitido"
+                }
+              />
+            ) : null}
           </dl>
 
           {participant.notes ? (
@@ -105,17 +107,29 @@ export default async function ParticipantPage(
                     </p>
                   </div>
 
-                  <form action={toggleAttendanceAction}>
-                    <input type="hidden" name="eventId" value={id} />
-                    <input type="hidden" name="participantId" value={participant.id} />
-                    <input type="hidden" name="eventDayId" value={day.id} />
-                    <SubmitButton
-                      className={attendance ? "btn-secondary btn-sm" : "btn-primary btn-sm"}
-                      pendingLabel="..."
-                    >
-                      {attendance ? "Desfazer" : "Confirmar presença"}
-                    </SubmitButton>
-                  </form>
+                  {attendance ? (
+                    user.role === "ADMIN" ? (
+                      <form action={toggleAttendanceAction}>
+                        <input type="hidden" name="eventId" value={id} />
+                        <input type="hidden" name="participantId" value={participant.id} />
+                        <input type="hidden" name="eventDayId" value={day.id} />
+                        <SubmitButton className="btn-secondary btn-sm" pendingLabel="...">
+                          Desfazer
+                        </SubmitButton>
+                      </form>
+                    ) : (
+                      <span className="text-xs font-medium text-emerald-700">Presença confirmada</span>
+                    )
+                  ) : (
+                    <form action={toggleAttendanceAction}>
+                      <input type="hidden" name="eventId" value={id} />
+                      <input type="hidden" name="participantId" value={participant.id} />
+                      <input type="hidden" name="eventDayId" value={day.id} />
+                      <SubmitButton className="btn-primary btn-sm" pendingLabel="...">
+                        Confirmar presença
+                      </SubmitButton>
+                    </form>
+                  )}
                 </li>
               );
             })}
@@ -134,50 +148,56 @@ export default async function ParticipantPage(
             {participant.code}
           </p>
 
-          <form action={regenerateCodeAction} className="mt-4">
-            <input type="hidden" name="eventId" value={id} />
-            <input type="hidden" name="id" value={participant.id} />
-            <SubmitButton
-              className="btn-secondary btn-sm w-full"
-              pendingLabel="Gerando..."
-              confirm="Gerar um novo código invalida o crachá já impresso. Continuar?"
-            >
-              Gerar novo código
-            </SubmitButton>
-          </form>
+          {user.role === "ADMIN" ? (
+            <form action={regenerateCodeAction} className="mt-4">
+              <input type="hidden" name="eventId" value={id} />
+              <input type="hidden" name="id" value={participant.id} />
+              <SubmitButton
+                className="btn-secondary btn-sm w-full"
+                pendingLabel="Gerando..."
+                confirm="Gerar um novo código invalida o crachá já impresso. Continuar?"
+              >
+                Gerar novo código
+              </SubmitButton>
+            </form>
+          ) : null}
         </section>
 
-        <section className="card-pad space-y-2">
-          <h3 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Certificado</h3>
-          <a
-            href={`/api/eventos/${id}/certificados/${participant.id}`}
-            target="_blank"
-            className="btn-primary w-full"
-            rel="noreferrer"
-          >
-            Emitir certificado (PDF)
-          </a>
-          <p className="text-xs text-slate-500">
-            A emissão registra um código de validação que pode ser conferido publicamente.
-          </p>
-        </section>
+        {user.role === "ADMIN" ? (
+          <>
+            <section className="card-pad space-y-2">
+              <h3 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Certificado</h3>
+              <a
+                href={`/api/eventos/${id}/certificados/${participant.id}`}
+                target="_blank"
+                className="btn-primary w-full"
+                rel="noreferrer"
+              >
+                Emitir certificado (PDF)
+              </a>
+              <p className="text-xs text-slate-500">
+                A emissão registra um código de validação que pode ser conferido publicamente.
+              </p>
+            </section>
 
-        <section className="card-pad">
-          <h3 className="mb-3 text-sm font-semibold tracking-wide text-slate-500 uppercase">
-            Excluir inscrição
-          </h3>
-          <form action={deleteParticipantAction}>
-            <input type="hidden" name="eventId" value={id} />
-            <input type="hidden" name="id" value={participant.id} />
-            <SubmitButton
-              className="btn-danger w-full"
-              pendingLabel="Excluindo..."
-              confirm={`Excluir ${participant.name} e suas presenças?`}
-            >
-              Excluir inscrito
-            </SubmitButton>
-          </form>
-        </section>
+            <section className="card-pad">
+              <h3 className="mb-3 text-sm font-semibold tracking-wide text-slate-500 uppercase">
+                Excluir inscrição
+              </h3>
+              <form action={deleteParticipantAction}>
+                <input type="hidden" name="eventId" value={id} />
+                <input type="hidden" name="id" value={participant.id} />
+                <SubmitButton
+                  className="btn-danger w-full"
+                  pendingLabel="Excluindo..."
+                  confirm={`Excluir ${participant.name} e suas presenças?`}
+                >
+                  Excluir inscrito
+                </SubmitButton>
+              </form>
+            </section>
+          </>
+        ) : null}
       </div>
     </div>
   );
