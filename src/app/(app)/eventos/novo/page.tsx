@@ -1,5 +1,5 @@
 import { PageHeader } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { DEFAULT_QUALIFICATIONS, toInputDate } from "@/lib/utils";
 
 import { CERTIFICATE_PLACEHOLDER, EventForm } from "../event-form";
@@ -7,7 +7,7 @@ import { CERTIFICATE_PLACEHOLDER, EventForm } from "../event-form";
 export const metadata = { title: "Novo evento" };
 
 export default async function NewEventPage() {
-  await requireUser();
+  await requireAdmin();
   const today = toInputDate(new Date());
 
   return (
