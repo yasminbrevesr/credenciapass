@@ -22,8 +22,12 @@ export function Logo({
         )}
       >
         <img
-          src="/Logo%20Amarelo%20%20(1).jpg"
+          src="/brevescorp-logo.svg"
           alt="CredenciaPass"
+          width={48}
+          height={48}
+          decoding="async"
+          fetchPriority="high"
           className="absolute inset-1/2 h-[175%] w-[175%] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover"
         />
       </span>
