@@ -14,7 +14,6 @@ export async function loadEventForReports(eventId: string) {
   });
 }
 
-/** Inscritos com suas presenças, base de quase todos os relatórios. */
 export async function loadParticipants(eventId: string) {
   return prisma.participant.findMany({
     where: { eventId },
@@ -72,10 +71,6 @@ export function summarizeByDay(
   });
 }
 
-/* ------------------------------------------------------------------ */
-/* Exportação em Excel                                                 */
-/* ------------------------------------------------------------------ */
-
 function createWorkbook() {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "CredenciaPass";
@@ -98,7 +93,6 @@ export async function buildParticipantsWorkbook(eventId: string): Promise<ExcelJ
   const participants = await loadParticipants(eventId);
 
   const workbook = createWorkbook();
-
   const sheet = workbook.addWorksheet("Inscritos");
   sheet.columns = [
     { header: "Nome", key: "name", width: 34 },
@@ -114,14 +108,14 @@ export async function buildParticipantsWorkbook(eventId: string): Promise<ExcelJ
   ];
   for (const participant of participants) {
     sheet.addRow({
-      name: participant.name,
-      document: formatDocument(participant.document),
-      qualification: participant.qualification,
-      email: participant.email ?? "",
-      phone: formatPhone(participant.phone),
-      organization: participant.organization ?? "",
-      position: participant.position ?? "",
-      code: participant.code,
+      name: participant.name || "S/N",
+      document: formatDocument(participant.document) || "S/N",
+      qualification: participant.qualification || "S/N",
+      email: participant.email || "S/N",
+      phone: formatPhone(participant.phone) || "S/N",
+      organization: participant.organization || "S/N",
+      position: participant.position || "S/N",
+      code: participant.code || "S/N",
       attendances: participant.attendances.length,
       createdAt: formatDateTime(participant.createdAt),
     });
@@ -135,11 +129,9 @@ export async function buildParticipantsWorkbook(eventId: string): Promise<ExcelJ
     { header: "% do total", key: "percent", width: 12 },
   ];
   for (const row of summarizeByQualification(event, participants)) {
-    summary.addRow({ qualification: row.qualification, total: row.total, percent: `${row.percent}%` });
+    summary.addRow({ qualification: row.qualification || "S/N", total: row.total, percent: `${row.percent}%` });
   }
-  summary.addRow({ qualification: "TOTAL", total: participants.length, percent: "100%" }).font = {
-    bold: true,
-  };
+  summary.addRow({ qualification: "TOTAL", total: participants.length, percent: "100%" }).font = { bold: true };
   styleHeader(summary);
 
   return workbook.xlsx.writeBuffer();
@@ -151,8 +143,6 @@ export async function buildAttendanceWorkbook(eventId: string): Promise<ExcelJS.
   const participants = await loadParticipants(eventId);
 
   const workbook = createWorkbook();
-
-  // Aba 1: resumo por dia
   const perDay = workbook.addWorksheet("Resumo por dia");
   perDay.columns = [
     { header: "Dia", key: "date", width: 16 },
@@ -161,16 +151,10 @@ export async function buildAttendanceWorkbook(eventId: string): Promise<ExcelJS.
     { header: "% presença", key: "percent", width: 12 },
   ];
   for (const day of summarizeByDay(event.days, participants)) {
-    perDay.addRow({
-      date: formatDate(day.date),
-      present: day.present,
-      absent: day.absent,
-      percent: `${day.percent}%`,
-    });
+    perDay.addRow({ date: formatDate(day.date), present: day.present, absent: day.absent, percent: `${day.percent}%` });
   }
   styleHeader(perDay);
 
-  // Aba 2: matriz participante × dia
   const matrix = workbook.addWorksheet("Presença geral");
   matrix.columns = [
     { header: "Nome", key: "name", width: 34 },
@@ -181,20 +165,19 @@ export async function buildAttendanceWorkbook(eventId: string): Promise<ExcelJS.
   ];
   for (const participant of participants) {
     const row: Record<string, string | number> = {
-      name: participant.name,
-      document: formatDocument(participant.document),
-      qualification: participant.qualification,
+      name: participant.name || "S/N",
+      document: formatDocument(participant.document) || "S/N",
+      qualification: participant.qualification || "S/N",
       total: participant.attendances.length,
     };
     for (const day of event.days) {
       const attendance = participant.attendances.find((item) => item.eventDayId === day.id);
-      row[day.id] = attendance ? formatDateTime(attendance.checkedInAt) : "—";
+      row[day.id] = attendance ? formatDateTime(attendance.checkedInAt) : "Ausente";
     }
     matrix.addRow(row);
   }
   styleHeader(matrix);
 
-  // Abas por dia: lista de presentes e ausentes
   for (const day of event.days) {
     const sheet = workbook.addWorksheet(`Dia ${formatDate(day.date).replace(/\//g, "-")}`);
     sheet.columns = [
@@ -208,12 +191,12 @@ export async function buildAttendanceWorkbook(eventId: string): Promise<ExcelJS.
     for (const participant of participants) {
       const attendance = participant.attendances.find((item) => item.eventDayId === day.id);
       sheet.addRow({
-        name: participant.name,
-        document: formatDocument(participant.document),
-        qualification: participant.qualification,
+        name: participant.name || "S/N",
+        document: formatDocument(participant.document) || "S/N",
+        qualification: participant.qualification || "S/N",
         status: attendance ? "Presente" : "Ausente",
-        time: attendance ? formatDateTime(attendance.checkedInAt) : "",
-        method: attendance ? (attendance.method === "QRCODE" ? "Leitura de código" : "Manual") : "",
+        time: attendance ? formatDateTime(attendance.checkedInAt) : "S/N",
+        method: attendance ? (attendance.method === "QRCODE" ? "Leitura de código" : "Manual") : "S/N",
       });
     }
     styleHeader(sheet);
