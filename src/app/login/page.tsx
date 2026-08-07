@@ -1,17 +1,11 @@
-import { redirect } from "next/navigation";
-
 import { Logo } from "@/components/logo";
 import { SiteFooter } from "@/components/site-footer";
-import { getSession } from "@/lib/auth";
 
 import { LoginForm } from "./login-form";
 
 export const metadata = { title: "Entrar" };
 
 export default async function LoginPage(props: PageProps<"/login">) {
-  const user = await getSession();
-  if (user) redirect("/");
-
   const params = await props.searchParams;
   const raw = params.redirect;
   const redirectTo = typeof raw === "string" && raw.startsWith("/") ? raw : "/";
