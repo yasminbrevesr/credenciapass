@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { Alert } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { parseQualifications } from "@/lib/utils";
 
@@ -12,7 +12,7 @@ export const metadata = { title: "Novo inscrito" };
 export default async function NewParticipantPage(
   props: PageProps<"/eventos/[id]/participantes/novo">,
 ) {
-  await requireUser();
+  await requireAdmin();
   const { id } = await props.params;
   const searchParams = await props.searchParams;
   const saved = typeof searchParams.ok === "string" ? searchParams.ok : "";
@@ -25,9 +25,7 @@ export default async function NewParticipantPage(
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-slate-900">Inscrever participante</h2>
-
       {saved ? <Alert tone="info">{saved} foi inscrito(a) com sucesso.</Alert> : null}
-
       <ParticipantForm
         eventId={event.id}
         qualifications={qualifications}
