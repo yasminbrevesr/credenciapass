@@ -32,6 +32,8 @@ export default async function ParticipantPage(
     participant.attendances.map((attendance) => [attendance.eventDayId, attendance]),
   );
   const base = `/eventos/${id}/participantes`;
+  const requiredDays = Math.max(1, participant.event.minAttendanceDays);
+  const certificateEligible = participant.attendances.length >= requiredDays;
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -59,12 +61,12 @@ export default async function ParticipantPage(
           </div>
 
           <dl className="mt-5 grid gap-4 sm:grid-cols-2">
-            <Field label="CPF / Documento" value={formatDocument(participant.document)} />
-            <Field label="Código do crachá" value={participant.code} mono />
-            <Field label="E-mail" value={participant.email ?? "—"} />
-            <Field label="Celular" value={formatPhone(participant.phone) || "—"} />
-            <Field label="Instituição / empresa" value={participant.organization ?? "—"} />
-            <Field label="Cargo / função" value={participant.position ?? "—"} />
+            <Field label="CPF / Documento" value={formatDocument(participant.document) || "S/N"} />
+            <Field label="Código do crachá" value={participant.code || "S/N"} mono />
+            <Field label="E-mail" value={participant.email || "S/N"} />
+            <Field label="Celular" value={formatPhone(participant.phone) || "S/N"} />
+            <Field label="Instituição / empresa" value={participant.organization || "S/N"} />
+            <Field label="Cargo / função" value={participant.position || "S/N"} />
             <Field label="Inscrito em" value={formatDateTime(participant.createdAt)} />
             {user.role === "ADMIN" ? (
               <Field
@@ -72,18 +74,18 @@ export default async function ParticipantPage(
                 value={
                   participant.certificates.length > 0
                     ? `Emitido (${participant.certificates[0].code})`
-                    : "Não emitido"
+                    : certificateEligible
+                      ? "Elegível para emissão"
+                      : `Não elegível — exige ${requiredDays} ${requiredDays === 1 ? "presença" : "presenças"}`
                 }
               />
             ) : null}
           </dl>
 
-          {participant.notes ? (
-            <div className="mt-4 rounded-lg bg-slate-50 p-3">
-              <p className="text-xs font-semibold text-slate-500 uppercase">Observações</p>
-              <p className="mt-1 text-sm whitespace-pre-wrap text-slate-700">{participant.notes}</p>
-            </div>
-          ) : null}
+          <div className="mt-4 rounded-lg bg-slate-50 p-3">
+            <p className="text-xs font-semibold text-slate-500 uppercase">Observações</p>
+            <p className="mt-1 text-sm whitespace-pre-wrap text-slate-700">{participant.notes || "S/N"}</p>
+          </div>
         </section>
 
         <section className="card-pad">
@@ -113,9 +115,7 @@ export default async function ParticipantPage(
                         <input type="hidden" name="eventId" value={id} />
                         <input type="hidden" name="participantId" value={participant.id} />
                         <input type="hidden" name="eventDayId" value={day.id} />
-                        <SubmitButton className="btn-secondary btn-sm" pendingLabel="...">
-                          Desfazer
-                        </SubmitButton>
+                        <SubmitButton className="btn-secondary btn-sm" pendingLabel="...">Desfazer</SubmitButton>
                       </form>
                     ) : (
                       <span className="text-xs font-medium text-emerald-700">Presença confirmada</span>
@@ -125,9 +125,7 @@ export default async function ParticipantPage(
                       <input type="hidden" name="eventId" value={id} />
                       <input type="hidden" name="participantId" value={participant.id} />
                       <input type="hidden" name="eventDayId" value={day.id} />
-                      <SubmitButton className="btn-primary btn-sm" pendingLabel="...">
-                        Confirmar presença
-                      </SubmitButton>
+                      <SubmitButton className="btn-primary btn-sm" pendingLabel="...">Confirmar presença</SubmitButton>
                     </form>
                   )}
                 </li>
@@ -139,14 +137,10 @@ export default async function ParticipantPage(
 
       <div className="space-y-6">
         <section className="card-pad text-center">
-          <h3 className="mb-3 text-sm font-semibold tracking-wide text-slate-500 uppercase">
-            Código do crachá
-          </h3>
+          <h3 className="mb-3 text-sm font-semibold tracking-wide text-slate-500 uppercase">Código do crachá</h3>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qrCode} alt={`QR Code de ${participant.name}`} className="mx-auto h-44 w-44" />
-          <p className="mt-2 font-mono text-sm font-semibold tracking-wider text-slate-700">
-            {participant.code}
-          </p>
+          <p className="mt-2 font-mono text-sm font-semibold tracking-wider text-slate-700">{participant.code}</p>
 
           {user.role === "ADMIN" ? (
             <form action={regenerateCodeAction} className="mt-4">
@@ -167,23 +161,29 @@ export default async function ParticipantPage(
           <>
             <section className="card-pad space-y-2">
               <h3 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Certificado</h3>
-              <a
-                href={`/api/eventos/${id}/certificados/${participant.id}`}
-                target="_blank"
-                className="btn-primary w-full"
-                rel="noreferrer"
-              >
-                Emitir certificado (PDF)
-              </a>
+              {certificateEligible ? (
+                <a
+                  href={`/api/eventos/${id}/certificados/${participant.id}`}
+                  target="_blank"
+                  className="btn-primary w-full"
+                  rel="noreferrer"
+                >
+                  {participant.certificates.length > 0 ? "Baixar certificado (PDF)" : "Emitir certificado (PDF)"}
+                </a>
+              ) : (
+                <button type="button" className="btn-secondary w-full" disabled>
+                  Certificado indisponível
+                </button>
+              )}
               <p className="text-xs text-slate-500">
-                A emissão registra um código de validação que pode ser conferido publicamente.
+                {certificateEligible
+                  ? "A emissão registra um código de validação que pode ser conferido publicamente."
+                  : `O participante precisa ter presença em pelo menos ${requiredDays} ${requiredDays === 1 ? "dia" : "dias"}.`}
               </p>
             </section>
 
             <section className="card-pad">
-              <h3 className="mb-3 text-sm font-semibold tracking-wide text-slate-500 uppercase">
-                Excluir inscrição
-              </h3>
+              <h3 className="mb-3 text-sm font-semibold tracking-wide text-slate-500 uppercase">Excluir inscrição</h3>
               <form action={deleteParticipantAction}>
                 <input type="hidden" name="eventId" value={id} />
                 <input type="hidden" name="id" value={participant.id} />
