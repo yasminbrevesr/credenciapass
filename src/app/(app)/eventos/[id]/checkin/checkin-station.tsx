@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from "react";
 
 import { classNames } from "@/lib/utils";
 
-import { checkInByCode, type CheckInResult } from "./actions";
+import {
+  checkInByCode,
+  getRecentCheckIns,
+  type CheckInResult,
+  type RecentCheckIn,
+} from "./actions";
 
-type HistoryItem = CheckInResult & { at: number };
-
-/** Bipe curto de confirmação/erro — sem depender de arquivos de áudio. */
 function beep(ok: boolean) {
   try {
     const AudioContextClass =
@@ -26,9 +28,7 @@ function beep(ok: boolean) {
     oscillator.start();
     oscillator.stop(context.currentTime + (ok ? 0.12 : 0.3));
     oscillator.onended = () => context.close();
-  } catch {
-    // navegador sem permissão de áudio: segue sem som
-  }
+  } catch {}
 }
 
 export function CheckinStation({
@@ -43,11 +43,23 @@ export function CheckinStation({
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<CheckInResult | null>(null);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [history, setHistory] = useState<RecentCheckIn[]>([]);
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  const lastScanRef = useRef<{ code: string; at: number }>({ code: "", at: 0 });
+  const scanLockedRef = useRef(false);
+
+  async function refreshHistory() {
+    try {
+      setHistory(await getRecentCheckIns(eventId, eventDayId));
+    } catch {}
+  }
+
+  useEffect(() => {
+    void refreshHistory();
+    const timer = window.setInterval(() => void refreshHistory(), 3000);
+    return () => window.clearInterval(timer);
+  }, [eventId, eventDayId]);
 
   async function submitCode(value: string, method: "QRCODE" | "MANUAL") {
     const trimmed = value.trim();
@@ -57,8 +69,8 @@ export function CheckinStation({
     try {
       const response = await checkInByCode({ eventId, eventDayId, code: trimmed, method });
       setResult(response);
-      setHistory((current) => [{ ...response, at: Date.now() }, ...current].slice(0, 15));
       beep(response.status === "ok");
+      await refreshHistory();
     } catch {
       setResult({ status: "erro", message: "Falha ao registrar. Tente novamente." });
       beep(false);
@@ -69,12 +81,12 @@ export function CheckinStation({
     }
   }
 
-  // Câmera: o leitor só é carregado quando o operador liga, para não pesar a tela.
   useEffect(() => {
     if (!cameraOn) return;
 
     let scanner: { stop: () => Promise<void>; clear: () => void } | null = null;
     let cancelled = false;
+    scanLockedRef.current = false;
 
     (async () => {
       try {
@@ -86,10 +98,9 @@ export function CheckinStation({
           { facingMode: "environment" },
           { fps: 10, qrbox: { width: 240, height: 240 } },
           (decoded: string) => {
-            const now = Date.now();
-            // Evita registrar o mesmo crachá várias vezes enquanto ele está na frente da câmera.
-            if (lastScanRef.current.code === decoded && now - lastScanRef.current.at < 3000) return;
-            lastScanRef.current = { code: decoded, at: now };
+            if (scanLockedRef.current) return;
+            scanLockedRef.current = true;
+            setCameraOn(false);
             void submitCode(decoded, "QRCODE");
           },
           () => {},
@@ -111,7 +122,6 @@ export function CheckinStation({
           .catch(() => {});
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cameraOn, eventDayId]);
 
   const tone =
@@ -127,16 +137,14 @@ export function CheckinStation({
     <div className="grid gap-6 lg:grid-cols-2">
       <section className="card-pad space-y-4">
         <div>
-          <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">
-            Leitura do crachá
-          </h2>
+          <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Leitura do crachá</h2>
           <p className="text-sm text-slate-500">Registrando presença de {dayLabel}.</p>
         </div>
 
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            void submitCode(code, "QRCODE");
+            void submitCode(code, "MANUAL");
           }}
           className="flex gap-2"
         >
@@ -164,25 +172,18 @@ export function CheckinStation({
               setCameraOn((current) => !current);
             }}
           >
-            {cameraOn ? "Desligar câmera" : "Ler com a câmera"}
+            {cameraOn ? "Desligar câmera" : "Ler próximo crachá"}
           </button>
           {cameraError ? <p className="mt-2 text-xs text-red-600">{cameraError}</p> : null}
         </div>
 
-        <div
-          id="leitor-camera"
-          className={classNames("overflow-hidden rounded-lg", cameraOn ? "block" : "hidden")}
-        />
+        <div id="leitor-camera" className={classNames("overflow-hidden rounded-lg", cameraOn ? "block" : "hidden")} />
 
         <div className={classNames("rounded-xl border p-4 transition", tone)}>
           {result ? (
             <>
               <p className="text-sm font-semibold text-slate-900">
-                {result.status === "ok"
-                  ? "Presença confirmada"
-                  : result.status === "duplicado"
-                    ? "Já registrado"
-                    : "Não registrado"}
+                {result.status === "ok" ? "Presença confirmada" : result.status === "duplicado" ? "Já registrado" : "Não registrado"}
               </p>
               {result.participant ? (
                 <>
@@ -202,36 +203,28 @@ export function CheckinStation({
       </section>
 
       <section className="card-pad">
-        <h2 className="mb-3 text-sm font-semibold tracking-wide text-slate-500 uppercase">
-          Últimas leituras
-        </h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Últimas leituras</h2>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => void refreshHistory()}>
+            Atualizar
+          </button>
+        </div>
 
         {history.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhuma leitura nesta sessão.</p>
+          <p className="text-sm text-slate-500">Nenhuma presença registrada neste dia.</p>
         ) : (
           <ul className="divide-y divide-slate-100">
             {history.map((item) => (
-              <li key={item.at} className="flex items-center justify-between gap-3 py-2">
+              <li key={item.id} className="flex items-center justify-between gap-3 py-2">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-slate-800">
-                    {item.participant?.name ?? "Código não encontrado"}
+                  <p className="truncate text-sm font-medium text-slate-800">{item.participant.name}</p>
+                  <p className="truncate text-xs text-slate-500">
+                    {item.participant.qualification}
+                    {item.operator?.name ? ` · por ${item.operator.name}` : ""}
                   </p>
-                  <p className="truncate text-xs text-slate-500">{item.message}</p>
                 </div>
-                <span
-                  className={classNames(
-                    "badge shrink-0",
-                    item.status === "ok"
-                      ? "bg-emerald-50 text-emerald-700"
-                      : item.status === "duplicado"
-                        ? "bg-amber-50 text-amber-700"
-                        : "bg-red-50 text-red-700",
-                  )}
-                >
-                  {new Date(item.at).toLocaleTimeString("pt-BR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                <span className="badge shrink-0 bg-emerald-50 text-emerald-700">
+                  {new Date(item.checkedInAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </li>
             ))}
