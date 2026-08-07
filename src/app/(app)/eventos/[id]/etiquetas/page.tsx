@@ -8,7 +8,7 @@ import { formatDocument, parseQualifications } from "@/lib/utils";
 
 import { LabelPicker } from "./label-picker";
 
-export const metadata = { title: "Etiquetas" };
+export const metadata = { title: "Impressão de etiquetas" };
 
 export default async function LabelsPage(props: PageProps<"/eventos/[id]/etiquetas">) {
   await requireUser();
@@ -29,10 +29,16 @@ export default async function LabelsPage(props: PageProps<"/eventos/[id]/etiquet
 
   return (
     <div className="space-y-4">
+      <div>
+        <h2 className="text-xl font-semibold text-slate-900">Impressão de etiquetas para crachá</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Gere etiquetas com nome e qualificação, escolhendo também QR Code, código de barras ou nenhum código.
+        </p>
+      </div>
+
       <Alert tone="info">
-        Selecione os inscritos, escolha o formato e clique em <strong>Gerar folha</strong>. A folha abre
-        em uma nova aba pronta para imprimir (Ctrl+P) — confira em &ldquo;Margens: nenhuma&rdquo; e
-        escala 100%.
+        Selecione os inscritos, escolha o tamanho da etiqueta e o tipo de código. Depois clique em{" "}
+        <strong>Gerar folha</strong>. A folha abre em uma nova aba pronta para imprimir — use escala 100%.
       </Alert>
 
       <LabelPicker
@@ -42,7 +48,8 @@ export default async function LabelsPage(props: PageProps<"/eventos/[id]/etiquet
         selectedQualification={qualification}
         participants={participants.map((participant) => ({
           ...participant,
-          document: formatDocument(participant.document),
+          document: formatDocument(participant.document) || "S/N",
+          organization: participant.organization || "S/N",
         }))}
       />
     </div>
