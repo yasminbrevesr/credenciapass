@@ -63,25 +63,6 @@ function readForm(formData: FormData): EventInput | string {
   };
 }
 
-async function syncEventDays(eventId: string, startDate: Date, endDate: Date) {
-  const wanted = eachDay(startDate, endDate);
-  const wantedTimes = new Set(wanted.map((day) => day.getTime()));
-  const current = await prisma.eventDay.findMany({ where: { eventId } });
-
-  const obsolete = current.filter((day) => !wantedTimes.has(dateOnly(day.date).getTime()));
-  if (obsolete.length > 0) {
-    await prisma.eventDay.deleteMany({ where: { id: { in: obsolete.map((day) => day.id) } } });
-  }
-
-  const currentTimes = new Set(current.map((day) => dateOnly(day.date).getTime()));
-  const missing = wanted.filter((day) => !currentTimes.has(day.getTime()));
-  if (missing.length > 0) {
-    await prisma.eventDay.createMany({
-      data: missing.map((date) => ({ eventId, date })),
-    });
-  }
-}
-
 export async function createEventAction(
   _prev: EventFormState,
   formData: FormData,
@@ -90,8 +71,18 @@ export async function createEventAction(
   const parsed = readForm(formData);
   if (typeof parsed === "string") return { error: parsed };
 
-  const event = await prisma.event.create({ data: parsed });
-  await syncEventDays(event.id, parsed.startDate, parsed.endDate);
+  const event = await prisma.$transaction(async (tx) => {
+    const created = await tx.event.create({ data: parsed });
+    const days = eachDay(parsed.startDate, parsed.endDate);
+
+    if (days.length > 0) {
+      await tx.eventDay.createMany({
+        data: days.map((date) => ({ eventId: created.id, date })),
+      });
+    }
+
+    return created;
+  });
 
   revalidatePath("/");
   redirect(`/eventos/${event.id}`);
@@ -108,8 +99,28 @@ export async function updateEventAction(
   const parsed = readForm(formData);
   if (typeof parsed === "string") return { error: parsed };
 
-  await prisma.event.update({ where: { id }, data: parsed });
-  await syncEventDays(id, parsed.startDate, parsed.endDate);
+  await prisma.$transaction(async (tx) => {
+    await tx.event.update({ where: { id }, data: parsed });
+
+    const wanted = eachDay(parsed.startDate, parsed.endDate);
+    const wantedTimes = new Set(wanted.map((day) => day.getTime()));
+    const current = await tx.eventDay.findMany({ where: { eventId: id } });
+
+    const obsolete = current.filter((day) => !wantedTimes.has(dateOnly(day.date).getTime()));
+    if (obsolete.length > 0) {
+      await tx.eventDay.deleteMany({
+        where: { id: { in: obsolete.map((day) => day.id) } },
+      });
+    }
+
+    const currentTimes = new Set(current.map((day) => dateOnly(day.date).getTime()));
+    const missing = wanted.filter((day) => !currentTimes.has(day.getTime()));
+    if (missing.length > 0) {
+      await tx.eventDay.createMany({
+        data: missing.map((date) => ({ eventId: id, date })),
+      });
+    }
+  });
 
   revalidatePath("/");
   revalidatePath(`/eventos/${id}`);
