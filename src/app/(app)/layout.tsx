@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Logo } from "@/components/logo";
 import { NavLink } from "@/components/nav-link";
+import { SiteFooter } from "@/components/site-footer";
 import { requireUser } from "@/lib/auth";
 
 import { logoutAction } from "./actions";
@@ -10,8 +11,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
 
   return (
-    <div className="min-h-screen">
-      <header className="no-print border-b border-slate-200 bg-white">
+    <div className="flex min-h-screen flex-col">
+      <header className="no-print border-b border-stone-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-4 py-3">
           <Link href="/" className="shrink-0">
             <Logo />
@@ -36,7 +37,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">{children}</main>
+      <SiteFooter />
     </div>
   );
 }
