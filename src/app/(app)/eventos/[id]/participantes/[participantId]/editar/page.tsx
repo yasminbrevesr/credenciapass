@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { parseQualifications } from "@/lib/utils";
+import { formatDocument, parseQualifications } from "@/lib/utils";
 
 import { ParticipantForm } from "../../participant-form";
 
@@ -31,7 +31,7 @@ export default async function EditParticipantPage(
         values={{
           id: participant.id,
           name: participant.name,
-          document: participant.document,
+          document: formatDocument(participant.document),
           email: participant.email ?? "",
           phone: participant.phone ?? "",
           qualification: participant.qualification,
