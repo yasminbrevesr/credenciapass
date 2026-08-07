@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireUser } from "@/lib/auth";
+import { requireEventAccess } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 export type CheckInResult = {
@@ -32,7 +32,7 @@ export type RecentCheckIn = {
 };
 
 export async function getRecentCheckIns(eventId: string, eventDayId: string): Promise<RecentCheckIn[]> {
-  await requireUser();
+  await requireEventAccess(eventId);
   const rows = await prisma.attendance.findMany({
     where: { eventDayId, participant: { eventId } },
     orderBy: { checkedInAt: "desc" },
@@ -58,7 +58,7 @@ export async function checkInByCode(input: {
   code: string;
   method?: "QRCODE" | "MANUAL";
 }): Promise<CheckInResult> {
-  const user = await requireUser();
+  const user = await requireEventAccess(input.eventId);
   const code = input.code.trim();
   if (!code) return { status: "erro", message: "Código vazio." };
 
@@ -122,12 +122,12 @@ export async function checkInByCode(input: {
 }
 
 export async function toggleAttendanceAction(formData: FormData) {
-  const user = await requireUser();
   const eventId = String(formData.get("eventId") ?? "");
   const participantId = String(formData.get("participantId") ?? "");
   const eventDayId = String(formData.get("eventDayId") ?? "");
   if (!eventId || !participantId || !eventDayId) return;
 
+  const user = await requireEventAccess(eventId);
   const existing = await prisma.attendance.findUnique({
     where: { participantId_eventDayId: { participantId, eventDayId } },
   });
