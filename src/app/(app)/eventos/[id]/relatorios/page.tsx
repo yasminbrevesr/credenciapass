@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { QualificationBadge } from "@/components/ui";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import {
   loadEventForReports,
   loadParticipants,
@@ -14,7 +14,7 @@ import { classNames, formatDate, formatDateLong, formatDateTime, formatDocument 
 export const metadata = { title: "Relatórios" };
 
 export default async function ReportsPage(props: PageProps<"/eventos/[id]/relatorios">) {
-  await requireUser();
+  await requireAdmin();
   const { id } = await props.params;
   const searchParams = await props.searchParams;
 
@@ -36,6 +36,8 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
         return { participant, attendance };
       })
     : [];
+  const selectedPresent = dayList.filter((item) => item.attendance).length;
+  const selectedAbsent = dayList.length - selectedPresent;
 
   return (
     <div className="space-y-6">
@@ -70,9 +72,7 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
             <tbody>
               {byQualification.map((row) => (
                 <tr key={row.qualification}>
-                  <td>
-                    <QualificationBadge value={row.qualification} />
-                  </td>
+                  <td><QualificationBadge value={row.qualification} /></td>
                   <td className="text-right font-medium text-slate-900">{row.total}</td>
                   <td className="text-right text-slate-500">{row.percent}%</td>
                 </tr>
@@ -109,7 +109,7 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
                   <td className="text-right text-slate-500">{day.percent}%</td>
                   <td className="text-right">
                     <Link
-                      href={`/eventos/${id}/relatorios?dia=${day.id}`}
+                      href={`/eventos/${id}/relatorios?dia=${day.id}#detalhe-dia`}
                       className="text-sm text-brand-600 hover:underline"
                     >
                       Detalhar
@@ -137,9 +137,7 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
                 <th>Nome</th>
                 <th>Qualificação</th>
                 {event.days.map((day) => (
-                  <th key={day.id} className="text-center">
-                    {formatDate(day.date)}
-                  </th>
+                  <th key={day.id} className="text-center">{formatDate(day.date)}</th>
                 ))}
                 <th className="text-right">Total</th>
               </tr>
@@ -178,48 +176,57 @@ export default async function ReportsPage(props: PageProps<"/eventos/[id]/relato
       </section>
 
       {selectedDay ? (
-        <section className="card-pad">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">
-              Lista de presença — {formatDateLong(selectedDay.date)}
-            </h2>
+        <section id="detalhe-dia" className="card-pad scroll-mt-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">
+                Lista completa — {formatDateLong(selectedDay.date)}
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                <strong className="text-emerald-700">{selectedPresent} presentes</strong>
+                {" · "}
+                <strong className="text-amber-700">{selectedAbsent} ausentes</strong>
+                {" · "}
+                {dayList.length} inscritos no total
+              </p>
+            </div>
             <div className="no-print flex gap-2">
-              <Link href={`/eventos/${id}/relatorios`} className="btn-secondary btn-sm">
-                Fechar
-              </Link>
+              <Link href={`/eventos/${id}/relatorios`} className="btn-secondary btn-sm">Fechar detalhe</Link>
             </div>
           </div>
 
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Documento</th>
-                <th>Qualificação</th>
-                <th>Situação</th>
-                <th>Check-in</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dayList.map(({ participant, attendance }) => (
-                <tr key={participant.id}>
-                  <td className="font-medium text-slate-900">{participant.name}</td>
-                  <td className="text-slate-600">{formatDocument(participant.document)}</td>
-                  <td className="text-slate-600">{participant.qualification}</td>
-                  <td>
-                    {attendance ? (
-                      <span className="badge bg-emerald-50 text-emerald-700">Presente</span>
-                    ) : (
-                      <span className="badge bg-slate-100 text-slate-600">Ausente</span>
-                    )}
-                  </td>
-                  <td className="text-slate-600">
-                    {attendance ? formatDateTime(attendance.checkedInAt) : "—"}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Documento</th>
+                  <th>Qualificação</th>
+                  <th>Situação</th>
+                  <th>Check-in</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {dayList.map(({ participant, attendance }) => (
+                  <tr key={participant.id}>
+                    <td className="font-medium text-slate-900">{participant.name}</td>
+                    <td className="text-slate-600">{formatDocument(participant.document)}</td>
+                    <td className="text-slate-600">{participant.qualification}</td>
+                    <td>
+                      {attendance ? (
+                        <span className="badge bg-emerald-50 text-emerald-700">Presente</span>
+                      ) : (
+                        <span className="badge bg-amber-50 text-amber-700">Ausente</span>
+                      )}
+                    </td>
+                    <td className="text-slate-600">
+                      {attendance ? formatDateTime(attendance.checkedInAt) : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       ) : null}
     </div>
