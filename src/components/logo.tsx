@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { classNames } from "@/lib/utils";
 
 export function Logo({
@@ -8,19 +7,25 @@ export function Logo({
   size?: "sm" | "md" | "lg";
   inverted?: boolean;
 }) {
-  const imageSize = size === "lg" ? 64 : size === "sm" ? 32 : 40;
+  const frameClass =
+    size === "lg" ? "h-20 w-20" : size === "sm" ? "h-10 w-10" : "h-14 w-14";
+
   const textClass = size === "lg" ? "text-2xl" : size === "sm" ? "text-base" : "text-lg";
 
   return (
-    <span className="inline-flex items-center gap-3 whitespace-nowrap">
-      <Image
-        src="/Logo Amarelo  (1).jpg"
-        alt="BrevesCorp"
-        width={imageSize}
-        height={imageSize}
-        className="shrink-0 rounded-xl object-contain"
-        priority
-      />
+    <span className="inline-flex items-center gap-2 whitespace-nowrap">
+      <span
+        className={classNames(
+          frameClass,
+          "relative shrink-0 overflow-hidden rounded-xl bg-white",
+        )}
+      >
+        <img
+          src="/Logo%20Amarelo%20%20(1).jpg"
+          alt="BrevesCorp"
+          className="absolute inset-1/2 h-[135%] w-[135%] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover"
+        />
+      </span>
 
       <span
         className={classNames(
