@@ -11,13 +11,23 @@ export const metadata = { title: "Usuários" };
 
 export default async function UsersPage() {
   const admin = await requireAdmin();
-  const users = await prisma.user.findMany({ orderBy: { name: "asc" } });
+  const [users, events] = await Promise.all([
+    prisma.user.findMany({
+      orderBy: { name: "asc" },
+      include: { eventAccesses: { select: { eventId: true } } },
+    }),
+    prisma.event.findMany({
+      where: { archived: false },
+      orderBy: { startDate: "desc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   return (
     <>
       <PageHeader
         title="Usuários"
-        subtitle="Operadores fazem credenciamento e consultam relatórios. Administradores também gerenciam usuários e excluem eventos."
+        subtitle="Cadastre operadores e defina exatamente quais eventos cada um pode acessar."
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -34,11 +44,16 @@ export default async function UsersPage() {
                       ) : null}
                     </p>
                     <p className="text-sm text-slate-500">{user.email}</p>
+                    {user.role === "OPERADOR" ? (
+                      <p className="mt-1 text-xs text-slate-400">
+                        {user.eventAccesses.length === 0
+                          ? "Nenhum evento atribuído"
+                          : `${user.eventAccesses.length} ${user.eventAccesses.length === 1 ? "evento atribuído" : "eventos atribuídos"}`}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400">
-                      criado em {formatDate(user.createdAt)}
-                    </span>
+                    <span className="text-xs text-slate-400">criado em {formatDate(user.createdAt)}</span>
                     {user.id === admin.id ? null : (
                       <form action={deleteUserAction}>
                         <input type="hidden" name="id" value={user.id} />
@@ -55,12 +70,14 @@ export default async function UsersPage() {
                 </div>
 
                 <EditUserForm
+                  events={events}
                   user={{
                     id: user.id,
                     name: user.name,
                     email: user.email,
                     role: user.role,
                     active: user.active,
+                    eventIds: user.eventAccesses.map((access) => access.eventId),
                   }}
                 />
               </div>
@@ -68,7 +85,7 @@ export default async function UsersPage() {
           </div>
         </div>
 
-        <NewUserForm />
+        <NewUserForm events={events} />
       </div>
     </>
   );
