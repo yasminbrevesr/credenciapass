@@ -5,7 +5,7 @@ import { Alert } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
-import { importParticipantsAction } from "./actions";
+import { ImportForm } from "./import-form";
 
 export const metadata = { title: "Importar inscritos" };
 
@@ -18,9 +18,6 @@ export default async function ImportParticipantsPage(
   const event = await prisma.event.findUnique({ where: { id } });
   if (!event) notFound();
 
-  const imported = Number(searchParams.importados ?? 0);
-  const duplicated = Number(searchParams.duplicados ?? 0);
-  const invalid = Number(searchParams.invalidos ?? 0);
   const error = typeof searchParams.erro === "string" ? searchParams.erro : "";
 
   return (
@@ -31,43 +28,16 @@ export default async function ImportParticipantsPage(
       </div>
 
       {error ? <Alert tone="error">{error}</Alert> : null}
-      {imported || duplicated || invalid ? (
-        <Alert tone="info">
-          Importados: <strong>{imported}</strong>. Duplicados ignorados: <strong>{duplicated}</strong>.
-          Linhas inválidas: <strong>{invalid}</strong>.
-        </Alert>
-      ) : null}
 
-      <div className="card-pad space-y-4">
-        <p className="text-sm text-slate-600">
-          Envie uma planilha Excel (.xlsx). As colunas obrigatórias são <strong>Nome</strong> e{" "}
-          <strong>Documento</strong>. Também são aceitas: E-mail, Telefone, Qualificação, Instituição,
-          Cargo e Observações.
-        </p>
+      <ImportForm eventId={id} />
 
-        <a href={`/api/eventos/${id}/participantes/modelo`} className="btn-secondary btn-sm">
-          Baixar modelo de planilha
-        </a>
+      <p className="text-xs text-slate-400">
+        O arquivo é processado no seu navegador e enviado ao servidor em pequenos lotes para evitar travamentos em planilhas grandes.
+      </p>
 
-        <form action={importParticipantsAction} className="space-y-4">
-          <input type="hidden" name="eventId" value={id} />
-          <div>
-            <label className="label" htmlFor="file">Planilha Excel</label>
-            <input
-              id="file"
-              name="file"
-              type="file"
-              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-              required
-              className="input"
-            />
-          </div>
-          <div className="flex gap-2">
-            <button type="submit" className="btn-primary">Importar inscritos</button>
-            <Link href={`/eventos/${id}/participantes`} className="btn-secondary">Voltar</Link>
-          </div>
-        </form>
-      </div>
+      <Link href={`/eventos/${id}/participantes`} className="text-sm text-slate-500 hover:text-slate-700">
+        ← Voltar para inscritos
+      </Link>
     </div>
   );
 }
