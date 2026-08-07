@@ -36,6 +36,7 @@ export default async function EventLayout({ children, params }: LayoutProps<"/ev
           <NavLink href={base} exact>Visão geral</NavLink>
           <NavLink href={`${base}/participantes`}>Inscritos e crachás</NavLink>
           <NavLink href={`${base}/checkin`}>Check-in</NavLink>
+          {isAdmin ? <NavLink href={`${base}/operadores`}>Operadores</NavLink> : null}
           {isAdmin ? <NavLink href={`${base}/certificados`}>Certificados</NavLink> : null}
           {isAdmin ? <NavLink href={`${base}/relatorios`}>Relatórios</NavLink> : null}
           {isAdmin ? <NavLink href={`${base}/editar`}>Configurações</NavLink> : null}
