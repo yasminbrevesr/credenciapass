@@ -11,13 +11,13 @@ PDF e relatórios exportáveis para Excel.
 | Módulo | O que resolve |
 | --- | --- |
 | **Eventos** | Cadastro de eventos com período, local, carga horária, qualificações aceitas e texto do certificado. Os dias de presença são criados automaticamente a partir do período. |
-| **Inscritos** | Nome, documento, e-mail, celular, qualificação (Participante, Professor, Colaborador ou outras que você definir), instituição, cargo e observações. Busca por nome/documento/e-mail/código e filtro por qualificação. Bloqueia documento repetido no mesmo evento. |
-| **Etiquetas** | Folha A4 pronta para impressão em três formatos (crachá 99×67 mm, 63,5×38,1 mm e 66,7×25,4 mm), com nome, qualificação, instituição e QR Code **ou** código de barras (Code128). |
-| **Check-in** | Um dia por vez. Aceita leitor USB de QR/código de barras (funciona como teclado), leitura pela câmera do celular/notebook, ou busca manual pelo nome. Avisa quando a presença já foi registrada e emite bipe de confirmação. |
-| **Certificados** | PDF em A4 paisagem, individual ou em lote (um arquivo com todos). Texto configurável por evento, exigência opcional de presença mínima e código de validação público. |
-| **Relatórios** | Inscritos por qualificação, presença por dia, presença geral (participante × dia) e lista de presença de cada dia — na tela e em `.xlsx`. |
-| **Usuários** | Perfis **Administrador** (acesso total) e **Operador** (credencia e consulta). |
-| **Validação pública** | `/validar` — qualquer pessoa confere a autenticidade de um certificado pelo código, sem login. |
+| **Inscritos** | Nome, documento, e-mail, celular, qualificação, instituição, cargo e observações. Busca por nome/documento/e-mail/código e filtro por qualificação. Bloqueia documento repetido no mesmo evento. |
+| **Etiquetas** | Folha A4 pronta para impressão, com nome, qualificação, instituição e QR Code ou código de barras (Code128). |
+| **Check-in** | Aceita leitor USB de QR/código de barras, leitura pela câmera do celular/notebook ou busca manual. Avisa quando a presença já foi registrada. |
+| **Certificados** | PDF em A4 paisagem, individual ou em lote. Texto configurável por evento, exigência opcional de presença mínima e código de validação público. |
+| **Relatórios** | Inscritos por qualificação, presença por dia, presença geral e exportações em `.xlsx`. |
+| **Usuários** | Perfis **Administrador** e **Operador**, com acesso de operador limitado aos eventos atribuídos. |
+| **Validação pública** | `/validar` — consulta pública da autenticidade de um certificado pelo código. |
 
 ---
 
@@ -25,9 +25,9 @@ PDF e relatórios exportáveis para Excel.
 
 - **Next.js 16** (App Router, Server Actions) + **React 19** + **TypeScript**
 - **Tailwind CSS 4**
-- **Prisma 7** + **SQLite** (arquivo único, fácil de fazer backup)
-- **pdf-lib** (certificados), **exceljs** (relatórios), **qrcode** / **JsBarcode** (etiquetas),
-  **html5-qrcode** (leitura pela câmera)
+- **Prisma 7** + **PostgreSQL / Supabase**
+- **pdf-lib** (certificados), **exceljs** (relatórios), **qrcode** / **JsBarcode** (etiquetas)
+- **html5-qrcode** (leitura pela câmera)
 
 ---
 
@@ -36,40 +36,41 @@ PDF e relatórios exportáveis para Excel.
 Requer **Node.js 20.9+**.
 
 ```bash
-npm install          # instala dependências e gera o Prisma Client
-cp .env.example .env # ajuste as variáveis (veja abaixo)
-npm run setup        # cria o banco e o usuário administrador
-npm run dev          # sobe em http://localhost:3000
+npm install
+cp .env.example .env
+npm run setup
+npm run dev
 ```
 
-Para produção:
+### Produção
+
+Migrações são uma etapa explícita e separada do build. Não rode `prisma migrate deploy` como efeito colateral da compilação da aplicação.
 
 ```bash
+npm run db:migrate
 npm run build
 npm run start
 ```
 
+Em CI/CD, execute `npm run db:migrate` uma única vez na etapa de deploy do banco e depois faça o build/deploy da aplicação. Builds de preview não devem aplicar migrações automaticamente.
+
 ### Variáveis de ambiente (`.env`)
 
 ```env
-DATABASE_URL="file:./data/credenciapass.db"
-SESSION_SECRET="uma-chave-aleatoria-com-32-caracteres-ou-mais"
+# Aplicação/serverless: Supavisor transaction pooler.
+DATABASE_URL="postgresql://USUARIO.PROJECT_REF:SENHA@REGIAO.pooler.supabase.com:6543/postgres?sslmode=require"
 
-# opcionais, usados apenas na primeira execução do seed
+# Prisma CLI/migrações: conexão direta ou Supavisor session pooler.
+DIRECT_URL="postgresql://USUARIO.PROJECT_REF:SENHA@REGIAO.pooler.supabase.com:5432/postgres?sslmode=require"
+
+SESSION_SECRET="gere-uma-chave-aleatoria-com-32-caracteres-ou-mais"
+
+# Opcionais para o seed inicial.
 ADMIN_EMAIL="admin@credenciapass.local"
-ADMIN_PASSWORD="credencia123"
+ADMIN_PASSWORD="troque-esta-senha"
 ```
 
-> **Troque `SESSION_SECRET` e a senha do administrador antes de colocar em produção.**
-> Gere uma chave com: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
-
-### Acesso inicial
-
-| E-mail | Senha |
-| --- | --- |
-| `admin@credenciapass.local` | `credencia123` |
-
-Troque a senha em **Usuários** logo no primeiro acesso.
+> Use valores reais apenas no ambiente local seguro ou nas variáveis protegidas da hospedagem. Não versione segredos.
 
 ### Dados de demonstração (opcional)
 
@@ -77,31 +78,30 @@ Troque a senha em **Usuários** logo no primeiro acesso.
 npm run seed:demo
 ```
 
-Cria o evento “Congresso de Exemplo 2026” com 3 dias, 5 inscritos e presenças registradas.
-
 ---
 
 ## Como usar no dia do evento
 
-1. **Antes**: cadastre o evento (período, qualificações, texto do certificado) e os inscritos.
-2. **Etiquetas**: em *Etiquetas*, selecione os inscritos, escolha o formato e imprima a folha
-   (margens “padrão/nenhuma”, escala 100%).
-3. **Na portaria**: abra *Check-in*, confirme o dia e deixe o cursor no campo de leitura. Passe o
-   leitor no crachá — a presença é registrada na hora. Sem crachá, use a busca manual.
-4. **Depois**: em *Relatórios*, exporte as listas em Excel; em *Certificados*, gere os PDFs.
+1. **Antes**: cadastre o evento e importe/cadastre os inscritos.
+2. **Etiquetas**: selecione os inscritos e imprima os crachás.
+3. **Na portaria**: abra *Check-in* e use o leitor, a câmera ou a confirmação manual.
+4. **Depois**: em *Relatórios*, exporte as listas; em *Certificados*, gere os PDFs.
 
 ---
 
-## Banco de dados e backup
+## Banco de dados
 
-Todo o sistema usa um único arquivo: `data/credenciapass.db`. Para backup, copie esse arquivo com o
-sistema parado (ou use `sqlite3 data/credenciapass.db ".backup backup.db"`).
+O sistema usa PostgreSQL através do Prisma. A aplicação usa `DATABASE_URL`; a CLI de migrações usa `DIRECT_URL`.
 
-Para migrar para **PostgreSQL** (vários operadores em rede, hospedagem em nuvem):
+Comandos principais:
 
-1. Troque `provider = "sqlite"` por `postgresql` em `prisma/schema.prisma`.
-2. Troque o adapter em `src/lib/db.ts` (`@prisma/adapter-pg`).
-3. Ajuste `DATABASE_URL` e rode `npx prisma migrate dev`.
+```bash
+npm run db:generate   # gera o Prisma Client
+npm run db:migrate    # aplica migrações pendentes em produção
+npm run db:studio     # abre o Prisma Studio
+```
+
+Alterações de schema devem ser versionadas em `prisma/migrations/` e aplicadas explicitamente antes da versão da aplicação que depende delas entrar em produção.
 
 ---
 
@@ -109,20 +109,21 @@ Para migrar para **PostgreSQL** (vários operadores em rede, hospedagem em nuvem
 
 ```
 prisma/
-  schema.prisma            modelos (User, Event, EventDay, Participant, Attendance, Certificate)
+  schema.prisma            modelos relacionais
+  migrations/              histórico de migrações PostgreSQL
   seed.ts                  usuário admin + dados de demonstração
 src/
   app/
-    (app)/                 área autenticada (eventos, inscritos, check-in, relatórios, usuários)
-    (print)/               páginas de impressão (folha de etiquetas), sem menus
-    api/                   PDFs de certificado e exportações .xlsx
-    login/  validar/       login e validação pública de certificado
+    (app)/                 área autenticada
+    (print)/               páginas de impressão
+    api/                   PDFs e exportações .xlsx
+    login/  validar/       login e validação pública
   components/              componentes de interface reaproveitados
   lib/
-    auth.ts                sessão em cookie assinado (JWT) + hash de senha
-    db.ts                  Prisma Client (SQLite via driver adapter)
-    certificate.ts         desenho do PDF do certificado
-    reports.ts             consultas dos relatórios e geração dos arquivos Excel
-    labels.ts  utils.ts    formatos de etiqueta, datas, códigos e formatações
-  proxy.ts                 proteção de rotas (redireciona quem não está logado)
+    auth.ts                sessão em cookie assinado (JWT) + autorização
+    db.ts                  Prisma Client + adapter PostgreSQL
+    certificate.ts         geração do PDF do certificado
+    reports.ts             relatórios e geração de Excel
+    labels.ts  utils.ts    etiquetas, datas, códigos e formatações
+  proxy.ts                 barreira inicial de rotas por cookie de sessão
 ```
