@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db";
 import { dateOnly, formatDate, formatDateLong, parseQualifications } from "@/lib/utils";
 
 export default async function EventOverviewPage(props: PageProps<"/eventos/[id]">) {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await props.params;
 
   const event = await prisma.event.findUnique({
@@ -103,9 +103,11 @@ export default async function EventOverviewPage(props: PageProps<"/eventos/[id]"
           </ul>
 
           <div className="mt-5 flex flex-col gap-2">
-            <Link href={`${base}/participantes/novo`} className="btn-primary">
-              Inscrever participante
-            </Link>
+            {user.role === "ADMIN" ? (
+              <Link href={`${base}/participantes/novo`} className="btn-primary">
+                Inscrever participante
+              </Link>
+            ) : null}
             <Link href={`${base}/checkin`} className="btn-secondary">
               Abrir check-in
             </Link>
