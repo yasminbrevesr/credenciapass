@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <header className="no-print sticky top-0 z-40 border-b border-white/50 bg-white/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-4 py-3">
           <Link href="/" className="shrink-0 rounded-xl p-1 transition hover:bg-white/80" aria-label="CredenciaPass">
-            <Logo compact />
+            <Logo />
           </Link>
 
           <nav className="flex flex-1 items-center gap-1">
