@@ -73,18 +73,44 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): 
   return lines;
 }
 
-function drawCentered(page: PDFPage, text: string, options: { y: number; size: number; font: PDFFont; color?: ReturnType<typeof rgb> }) {
+function drawCentered(
+  page: PDFPage,
+  text: string,
+  options: { y: number; size: number; font: PDFFont; color?: ReturnType<typeof rgb> },
+) {
   const width = options.font.widthOfTextAtSize(text, options.size);
   page.drawText(text, {
     x: (page.getWidth() - width) / 2,
     y: options.y,
     size: options.size,
     font: options.font,
-    color: options.color ?? rgb(0.1, 0.12, 0.17),
+    color: options.color ?? rgb(0.96, 0.95, 0.93),
   });
 }
 
-/** Desenha uma página de certificado (A4 paisagem) no documento informado. */
+function drawCornerAccents(page: PDFPage, width: number, height: number, color: ReturnType<typeof rgb>) {
+  const inset = 34;
+  const length = 54;
+  const thickness = 3;
+
+  // Superior esquerdo
+  page.drawLine({ start: { x: inset, y: height - inset }, end: { x: inset + length, y: height - inset }, thickness, color });
+  page.drawLine({ start: { x: inset, y: height - inset }, end: { x: inset, y: height - inset - length }, thickness, color });
+
+  // Superior direito
+  page.drawLine({ start: { x: width - inset, y: height - inset }, end: { x: width - inset - length, y: height - inset }, thickness, color });
+  page.drawLine({ start: { x: width - inset, y: height - inset }, end: { x: width - inset, y: height - inset - length }, thickness, color });
+
+  // Inferior esquerdo
+  page.drawLine({ start: { x: inset, y: inset }, end: { x: inset + length, y: inset }, thickness, color });
+  page.drawLine({ start: { x: inset, y: inset }, end: { x: inset, y: inset + length }, thickness, color });
+
+  // Inferior direito
+  page.drawLine({ start: { x: width - inset, y: inset }, end: { x: width - inset - length, y: inset }, thickness, color });
+  page.drawLine({ start: { x: width - inset, y: inset }, end: { x: width - inset, y: inset + length }, thickness, color });
+}
+
+/** Desenha uma página de certificado (A4 paisagem) no tema visual Breves. */
 export async function drawCertificatePage(pdf: PDFDocument, data: CertificateData) {
   const page = pdf.addPage([841.89, 595.28]);
   const { width, height } = page.getSize();
@@ -93,87 +119,151 @@ export async function drawCertificatePage(pdf: PDFDocument, data: CertificateDat
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const italic = await pdf.embedFont(StandardFonts.HelveticaOblique);
 
-  const brand = rgb(0.12, 0.29, 0.85);
-  const ink = rgb(0.1, 0.12, 0.17);
-  const muted = rgb(0.42, 0.45, 0.5);
+  // Paleta Breves — alinhada às cores brand do sistema.
+  const background = rgb(0.02, 0.02, 0.02);
+  const panel = rgb(0.055, 0.05, 0.045);
+  const brand = rgb(216 / 255, 154 / 255, 80 / 255); // #D89A50
+  const brandLight = rgb(237 / 255, 184 / 255, 116 / 255); // #EDB874
+  const brandDark = rgb(116 / 255, 73 / 255, 31 / 255); // #74491F
+  const ink = rgb(0.97, 0.96, 0.94);
+  const muted = rgb(0.65, 0.62, 0.58);
+  const subtle = rgb(0.20, 0.17, 0.13);
 
-  // Moldura
+  // Fundo preto profundo.
+  page.drawRectangle({ x: 0, y: 0, width, height, color: background });
+
+  // Moldura dupla e cantos Breves.
   page.drawRectangle({
     x: 24,
     y: 24,
     width: width - 48,
     height: height - 48,
     borderColor: brand,
-    borderWidth: 3,
+    borderWidth: 1.8,
   });
   page.drawRectangle({
-    x: 34,
-    y: 34,
-    width: width - 68,
-    height: height - 68,
-    borderColor: rgb(0.8, 0.85, 0.95),
-    borderWidth: 1,
+    x: 31,
+    y: 31,
+    width: width - 62,
+    height: height - 62,
+    borderColor: subtle,
+    borderWidth: 0.8,
   });
+  drawCornerAccents(page, width, height, brandLight);
 
-  drawCentered(page, "CERTIFICADO", { y: height - 110, size: 34, font: bold, color: brand });
+  // Cabeçalho.
   page.drawLine({
-    start: { x: width / 2 - 60, y: height - 124 },
-    end: { x: width / 2 + 60, y: height - 124 },
+    start: { x: width / 2 - 34, y: height - 74 },
+    end: { x: width / 2 + 34, y: height - 74 },
     thickness: 2,
     color: brand,
   });
+  drawCentered(page, "CERTIFICADO", {
+    y: height - 116,
+    size: 34,
+    font: bold,
+    color: brandLight,
+  });
+  page.drawLine({
+    start: { x: width / 2 - 92, y: height - 130 },
+    end: { x: width / 2 + 92, y: height - 130 },
+    thickness: 1,
+    color: brandDark,
+  });
 
-  drawCentered(page, "Certificamos que", { y: height - 180, size: 13, font: italic, color: muted });
+  // Área central com contraste sutil.
+  page.drawRectangle({
+    x: 66,
+    y: 176,
+    width: width - 132,
+    height: 250,
+    color: panel,
+    borderColor: subtle,
+    borderWidth: 0.8,
+  });
+
+  drawCentered(page, "Certificamos que", {
+    y: height - 180,
+    size: 13,
+    font: italic,
+    color: brand,
+  });
 
   // O nome diminui quando é muito longo, para nunca estourar a moldura.
   const name = data.participantName.toUpperCase();
-  let nameSize = 26;
-  while (bold.widthOfTextAtSize(name, nameSize) > width - 200 && nameSize > 13) nameSize -= 1;
-  drawCentered(page, name, { y: height - 215, size: nameSize, font: bold, color: ink });
+  let nameSize = 27;
+  while (bold.widthOfTextAtSize(name, nameSize) > width - 190 && nameSize > 13) nameSize -= 1;
+  drawCentered(page, name, {
+    y: height - 218,
+    size: nameSize,
+    font: bold,
+    color: ink,
+  });
+
+  page.drawLine({
+    start: { x: width / 2 - 150, y: height - 230 },
+    end: { x: width / 2 + 150, y: height - 230 },
+    thickness: 0.7,
+    color: brandDark,
+  });
 
   const body = applyPlaceholders(data.certificateText || DEFAULT_CERTIFICATE_TEXT, data);
-  const bodySize = body.length > 520 ? 13 : 15;
-  const lines = wrapText(body, regular, bodySize, width - 220);
+  const bodySize = body.length > 520 ? 12.5 : 14.5;
+  const lines = wrapText(body, regular, bodySize, width - 210);
 
-  let cursor = height - 260;
+  let cursor = height - 270;
   for (const line of lines) {
     drawCentered(page, line, { y: cursor, size: bodySize, font: regular, color: ink });
-    cursor -= bodySize * 1.9;
+    cursor -= bodySize * 1.85;
   }
 
-  // Assinatura
-  const signatureY = 130;
+  // Assinatura.
+  const signatureY = 145;
   page.drawLine({
     start: { x: width / 2 - 130, y: signatureY },
     end: { x: width / 2 + 130, y: signatureY },
     thickness: 1,
-    color: muted,
+    color: brand,
   });
   if (data.organizer) {
-    drawCentered(page, data.organizer, { y: signatureY - 16, size: 12, font: bold, color: ink });
+    drawCentered(page, data.organizer, {
+      y: signatureY - 17,
+      size: 12,
+      font: bold,
+      color: ink,
+    });
   }
   drawCentered(page, "Organização do evento", {
-    y: signatureY - (data.organizer ? 30 : 16),
+    y: signatureY - (data.organizer ? 32 : 18),
     size: 10,
     font: italic,
     color: muted,
   });
 
-  // Rodapé com dados de validação
+  // Rodapé de validação em faixa discreta.
+  page.drawRectangle({
+    x: 66,
+    y: 48,
+    width: width - 132,
+    height: 48,
+    color: panel,
+    borderColor: subtle,
+    borderWidth: 0.7,
+  });
   drawCentered(page, `Emitido em ${formatDateLong(data.issuedAt)}`, {
-    y: 76,
-    size: 10,
+    y: 79,
+    size: 9,
     font: regular,
     color: muted,
   });
   drawCentered(page, `Código de validação: ${data.validationCode}`, {
-    y: 62,
+    y: 64,
     size: 10,
     font: bold,
-    color: muted,
+    color: brandLight,
   });
   drawCentered(page, "Confira a autenticidade em /validar", {
-    y: 48,
+    y: 51,
     size: 8,
     font: italic,
     color: muted,
