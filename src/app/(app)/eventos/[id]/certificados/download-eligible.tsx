@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 type EligibleParticipant = { id: string; name: string };
 
@@ -11,25 +11,44 @@ export function DownloadEligibleCertificates({
   eventId: string;
   participants: EligibleParticipant[];
 }) {
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(participants.map((participant) => participant.id)));
   const [progress, setProgress] = useState(0);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
 
-  async function downloadAll() {
-    if (running || participants.length === 0) return;
+  const selectedParticipants = useMemo(
+    () => participants.filter((participant) => selected.has(participant.id)),
+    [participants, selected],
+  );
+
+  function toggle(id: string) {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAll() {
+    setSelected(new Set(participants.map((participant) => participant.id)));
+  }
+
+  function clearAll() {
+    setSelected(new Set());
+  }
+
+  async function downloadSelected() {
+    if (running || selectedParticipants.length === 0) return;
     setRunning(true);
     setProgress(0);
     setError("");
 
     try {
-      for (let index = 0; index < participants.length; index += 1) {
-        const participant = participants[index];
-        const response = await fetch(`/api/eventos/${eventId}/certificados/${participant.id}`, {
-          cache: "no-store",
-        });
-        if (!response.ok) {
-          throw new Error(`Não foi possível gerar o certificado de ${participant.name}.`);
-        }
+      for (let index = 0; index < selectedParticipants.length; index += 1) {
+        const participant = selectedParticipants[index];
+        const response = await fetch(`/api/eventos/${eventId}/certificados/${participant.id}`, { cache: "no-store" });
+        if (!response.ok) throw new Error(`Não foi possível gerar o certificado de ${participant.name}.`);
 
         const blob = await response.blob();
         const disposition = response.headers.get("Content-Disposition") ?? "";
@@ -59,16 +78,53 @@ export function DownloadEligibleCertificates({
   }
 
   return (
-    <div className="ml-auto flex flex-col items-end gap-1">
-      <button type="button" className="btn-primary" onClick={downloadAll} disabled={running}>
-        {running
-          ? `Baixando ${progress} de ${participants.length}...`
-          : `Baixar certificados separados (${participants.length})`}
-      </button>
-      {error ? <p className="max-w-sm text-right text-xs text-red-600">{error}</p> : null}
-      {!running && progress === participants.length && participants.length > 0 ? (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" className="btn-secondary btn-sm" onClick={selectAll} disabled={running}>Selecionar todos</button>
+        <button type="button" className="btn-secondary btn-sm" onClick={clearAll} disabled={running}>Limpar seleção</button>
+        <span className="text-sm text-slate-500">{selected.size} selecionados</span>
+        <button type="button" className="btn-primary btn-sm ml-auto" onClick={downloadSelected} disabled={running || selected.size === 0}>
+          {running ? `Baixando ${progress} de ${selectedParticipants.length}...` : `Baixar selecionados (${selectedParticipants.length})`}
+        </button>
+      </div>
+
+      {error ? <p className="text-xs text-red-600">{error}</p> : null}
+      {!running && progress === selectedParticipants.length && selectedParticipants.length > 0 ? (
         <p className="text-xs text-emerald-700">Downloads iniciados.</p>
       ) : null}
+
+      <div className="card overflow-x-auto">
+        <table className="table">
+          <thead>
+            <tr>
+              <th className="w-10"></th>
+              <th>Nome</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {participants.map((participant) => (
+              <tr key={participant.id}>
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={selected.has(participant.id)}
+                    onChange={() => toggle(participant.id)}
+                    disabled={running}
+                    className="h-4 w-4 accent-brand-600"
+                  />
+                </td>
+                <td className="font-medium text-slate-900">{participant.name}</td>
+                <td className="text-right">
+                  <button type="button" className="btn-secondary btn-sm" onClick={() => toggle(participant.id)} disabled={running}>
+                    {selected.has(participant.id) ? "Remover" : "Selecionar"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
