@@ -6,8 +6,8 @@ import { generateCode } from "@/lib/utils";
 
 /**
  * Garante que o participante tem um código de certificado e devolve os dados
- * necessários para gerar o PDF. Retorna null quando o inscrito não existe ou
- * não atingiu a presença mínima exigida pelo evento.
+ * necessários para gerar o PDF. É obrigatório ter ao menos 1 presença e,
+ * quando configurado, cumprir o mínimo de dias exigido pelo evento.
  */
 export async function prepareCertificate(
   eventId: string,
@@ -21,9 +21,8 @@ export async function prepareCertificate(
   if (!participant) return null;
 
   const attendedDays = participant.attendances.length;
-  if (participant.event.minAttendanceDays > 0 && attendedDays < participant.event.minAttendanceDays) {
-    return null;
-  }
+  const requiredDays = Math.max(1, participant.event.minAttendanceDays);
+  if (attendedDays < requiredDays) return null;
 
   const certificate =
     participant.certificates[0] ??
