@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { EmptyState, QualificationBadge } from "@/components/ui";
+import { EmptyState } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { formatDocument, formatPhone, parseQualifications } from "@/lib/utils";
+import { parseQualifications } from "@/lib/utils";
+
+import { ParticipantsTable } from "./participants-table";
 
 const PAGE_SIZE = 50;
 
@@ -125,42 +127,21 @@ export default async function ParticipantsPage(props: PageProps<"/eventos/[id]/p
           }
         />
       ) : (
-        <div className="card overflow-x-auto">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Documento</th>
-                <th>Qualificação</th>
-                <th>Contato</th>
-                <th>Presenças</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {participants.map((participant) => (
-                <tr key={participant.id}>
-                  <td>
-                    <Link href={`${base}/${participant.id}`} className="font-medium text-slate-900 hover:text-brand-600">
-                      {participant.name}
-                    </Link>
-                    <p className="text-xs text-slate-500">{participant.organization || "S/N"}</p>
-                  </td>
-                  <td className="text-slate-600">{formatDocument(participant.document) || "S/N"}</td>
-                  <td><QualificationBadge value={participant.qualification || "S/N"} /></td>
-                  <td className="text-slate-600">
-                    <p>{participant.email || "S/N"}</p>
-                    <p className="text-xs text-slate-500">{formatPhone(participant.phone) || "S/N"}</p>
-                  </td>
-                  <td className="text-slate-600">{participant._count.attendances}</td>
-                  <td className="text-right whitespace-nowrap">
-                    <Link href={`${base}/${participant.id}`} className="btn-secondary btn-sm">Abrir</Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ParticipantsTable
+          eventId={id}
+          total={total}
+          isAdmin={user.role === "ADMIN"}
+          participants={participants.map((participant) => ({
+            id: participant.id,
+            name: participant.name,
+            document: participant.document,
+            qualification: participant.qualification,
+            organization: participant.organization,
+            email: participant.email,
+            phone: participant.phone,
+            attendanceCount: participant._count.attendances,
+          }))}
+        />
       )}
 
       {pages > 1 ? (
