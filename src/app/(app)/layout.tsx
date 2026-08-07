@@ -18,9 +18,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           </Link>
 
           <nav className="flex flex-1 items-center gap-1">
-            <NavLink href="/" exact>
-              Eventos
-            </NavLink>
+            <NavLink href="/" exact>Eventos</NavLink>
+            {user.role === "ADMIN" ? <NavLink href="/movimentacoes">Movimentações</NavLink> : null}
             {user.role === "ADMIN" ? <NavLink href="/usuarios">Usuários</NavLink> : null}
           </nav>
 
@@ -32,9 +31,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
               </p>
             </div>
             <form action={logoutAction}>
-              <button type="submit" className="btn-secondary btn-sm">
-                Sair
-              </button>
+              <button type="submit" className="btn-secondary btn-sm">Sair</button>
             </form>
           </div>
         </div>
