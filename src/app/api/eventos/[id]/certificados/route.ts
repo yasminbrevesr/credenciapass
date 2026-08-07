@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { getSession } from "@/lib/auth";
-import { buildCertificatePdf, type CertificateData } from "@/lib/certificate";
-import { prepareCertificate } from "@/lib/certificate-service";
+import { buildCertificatePdf } from "@/lib/certificate";
+import { prepareCertificates } from "@/lib/certificate-service";
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/utils";
 
@@ -15,7 +15,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/eventos/[id]
   const { id } = await ctx.params;
   const { searchParams } = new URL(request.url);
 
-  const event = await prisma.event.findUnique({ where: { id } });
+  const event = await prisma.event.findUnique({ where: { id }, select: { name: true } });
   if (!event) return NextResponse.json({ error: "Evento não encontrado" }, { status: 404 });
 
   const ids = searchParams.get("ids")?.split(",").filter(Boolean) ?? [];
@@ -31,11 +31,11 @@ export async function GET(request: Request, ctx: RouteContext<"/api/eventos/[id]
     select: { id: true },
   });
 
-  const items: CertificateData[] = [];
-  for (const participant of participants) {
-    const data = await prepareCertificate(id, participant.id, user.id);
-    if (data) items.push(data);
-  }
+  const items = await prepareCertificates(
+    id,
+    participants.map((participant) => participant.id),
+    user.id,
+  );
 
   if (items.length === 0) {
     return NextResponse.json(
