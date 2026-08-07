@@ -13,7 +13,7 @@ import { CheckinStation } from "./checkin-station";
 export const metadata = { title: "Check-in" };
 
 export default async function CheckinPage(props: PageProps<"/eventos/[id]/checkin">) {
-  await requireUser();
+  const user = await requireUser();
   const { id } = await props.params;
   const searchParams = await props.searchParams;
 
@@ -27,10 +27,14 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
     return (
       <Alert tone="warn">
         Este evento não tem dias configurados.{" "}
-        <Link href={`/eventos/${id}/editar`} className="underline">
-          Ajuste o período do evento
-        </Link>{" "}
-        para liberar o check-in.
+        {user.role === "ADMIN" ? (
+          <>
+            <Link href={`/eventos/${id}/editar`} className="underline">Ajuste o período do evento</Link>{" "}
+            para liberar o check-in.
+          </>
+        ) : (
+          "Peça a um administrador para configurar o período do evento."
+        )}
       </Alert>
     );
   }
@@ -46,25 +50,28 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
     event.days[0];
 
   const query = typeof searchParams.q === "string" ? searchParams.q.trim() : "";
+  const participantWhere = {
+    eventId: id,
+    ...(query
+      ? {
+          OR: [
+            { name: { contains: query, mode: "insensitive" as const } },
+            { document: { contains: query, mode: "insensitive" as const } },
+            { code: { contains: query, mode: "insensitive" as const } },
+            { email: { contains: query, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
 
   const [attendanceCount, matches, recent] = await Promise.all([
     prisma.attendance.count({ where: { eventDayId: selectedDay.id } }),
-    query
-      ? prisma.participant.findMany({
-          where: {
-            eventId: id,
-            OR: [
-              { name: { contains: query } },
-              { document: { contains: query } },
-              { code: { contains: query } },
-              { email: { contains: query } },
-            ],
-          },
-          orderBy: { name: "asc" },
-          take: 25,
-          include: { attendances: { where: { eventDayId: selectedDay.id } } },
-        })
-      : Promise.resolve([]),
+    prisma.participant.findMany({
+      where: participantWhere,
+      orderBy: { name: "asc" },
+      take: 200,
+      include: { attendances: { where: { eventDayId: selectedDay.id } } },
+    }),
     prisma.attendance.findMany({
       where: { eventDayId: selectedDay.id },
       orderBy: { checkedInAt: "desc" },
@@ -97,9 +104,7 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
               >
                 {formatDate(day.date)}
                 {isToday ? (
-                  <span className={classNames("ml-1 text-xs", active ? "text-brand-100" : "text-emerald-600")}>
-                    hoje
-                  </span>
+                  <span className={classNames("ml-1 text-xs", active ? "text-brand-100" : "text-emerald-600")}>hoje</span>
                 ) : null}
               </Link>
             );
@@ -113,11 +118,7 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
         <StatCard label="Inscritos" value={event._count.participants} />
       </div>
 
-      <CheckinStation
-        eventId={id}
-        eventDayId={selectedDay.id}
-        dayLabel={formatDateLong(selectedDay.date)}
-      />
+      <CheckinStation eventId={id} eventDayId={selectedDay.id} dayLabel={formatDateLong(selectedDay.date)} />
 
       <section className="card-pad">
         <h2 className="mb-3 text-sm font-semibold tracking-wide text-slate-500 uppercase">
@@ -127,90 +128,84 @@ export default async function CheckinPage(props: PageProps<"/eventos/[id]/checki
         <form className="flex flex-wrap items-end gap-3" action={base}>
           <input type="hidden" name="dia" value={selectedDay.id} />
           <div className="min-w-56 flex-1">
-            <label className="label" htmlFor="q">
-              Buscar inscrito
-            </label>
+            <label className="label" htmlFor="q">Buscar inscrito</label>
             <input
               id="q"
               name="q"
               className="input"
               defaultValue={query}
-              placeholder="Nome, documento ou e-mail"
+              placeholder="Digite parte do nome, CPF ou e-mail"
             />
           </div>
-          <button type="submit" className="btn-primary">
-            Buscar
-          </button>
-          {query ? (
-            <Link href={`${base}?dia=${selectedDay.id}`} className="btn-secondary">
-              Limpar
-            </Link>
-          ) : null}
+          <button type="submit" className="btn-primary">Buscar</button>
+          {query ? <Link href={`${base}?dia=${selectedDay.id}`} className="btn-secondary">Limpar</Link> : null}
         </form>
 
-        {query ? (
-          matches.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500">Nenhum inscrito encontrado para “{query}”.</p>
-          ) : (
-            <div className="mt-4 overflow-x-auto">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Nome</th>
-                    <th>Documento</th>
-                    <th>Qualificação</th>
-                    <th>Situação</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {matches.map((participant) => {
-                    const attendance = participant.attendances[0];
-                    return (
-                      <tr key={participant.id}>
-                        <td className="font-medium text-slate-900">{participant.name}</td>
-                        <td className="text-slate-600">{formatDocument(participant.document)}</td>
-                        <td>
-                          <QualificationBadge value={participant.qualification} />
-                        </td>
-                        <td className="text-slate-600">
-                          {attendance ? `Presente (${formatDateTime(attendance.checkedInAt)})` : "Ausente"}
-                        </td>
-                        <td className="text-right">
+        <div className="mt-4 max-h-[30rem] overflow-auto rounded-lg border border-slate-200">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>CPF / Documento</th>
+                <th>Qualificação</th>
+                <th>Situação</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {matches.map((participant) => {
+                const attendance = participant.attendances[0];
+                return (
+                  <tr key={participant.id}>
+                    <td className="font-medium text-slate-900">{participant.name}</td>
+                    <td className="text-slate-600">{formatDocument(participant.document)}</td>
+                    <td><QualificationBadge value={participant.qualification} /></td>
+                    <td className="text-slate-600">
+                      {attendance ? `Presente (${formatDateTime(attendance.checkedInAt)})` : "Ausente"}
+                    </td>
+                    <td className="text-right">
+                      {attendance ? (
+                        user.role === "ADMIN" ? (
                           <form action={toggleAttendanceAction}>
                             <input type="hidden" name="eventId" value={id} />
                             <input type="hidden" name="participantId" value={participant.id} />
                             <input type="hidden" name="eventDayId" value={selectedDay.id} />
-                            <SubmitButton
-                              className={attendance ? "btn-secondary btn-sm" : "btn-primary btn-sm"}
-                              pendingLabel="..."
-                            >
-                              {attendance ? "Desfazer" : "Confirmar"}
-                            </SubmitButton>
+                            <SubmitButton className="btn-secondary btn-sm" pendingLabel="...">Desfazer</SubmitButton>
                           </form>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )
-        ) : (
-          <p className="mt-4 text-sm text-slate-500">
-            Use a busca para confirmar a presença de quem chegou sem o crachá.
-          </p>
-        )}
+                        ) : (
+                          <span className="text-xs font-medium text-emerald-700">Confirmado</span>
+                        )
+                      ) : (
+                        <form action={toggleAttendanceAction}>
+                          <input type="hidden" name="eventId" value={id} />
+                          <input type="hidden" name="participantId" value={participant.id} />
+                          <input type="hidden" name="eventDayId" value={selectedDay.id} />
+                          <SubmitButton className="btn-primary btn-sm" pendingLabel="...">Confirmar</SubmitButton>
+                        </form>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {matches.length === 0 ? (
+            <p className="p-4 text-sm text-slate-500">Nenhum inscrito encontrado.</p>
+          ) : null}
+        </div>
+        {!query && event._count.participants > 200 ? (
+          <p className="mt-2 text-xs text-slate-500">Exibindo os primeiros 200 inscritos. Use a busca para localizar os demais.</p>
+        ) : null}
       </section>
 
       <section className="card-pad">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">
-            Presenças registradas hoje
-          </h2>
-          <Link href={`/eventos/${id}/relatorios?dia=${selectedDay.id}`} className="text-sm text-brand-600 hover:underline">
-            Ver relatório completo
-          </Link>
+          <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">Presenças registradas hoje</h2>
+          {user.role === "ADMIN" ? (
+            <Link href={`/eventos/${id}/relatorios?dia=${selectedDay.id}#detalhe-dia`} className="text-sm text-brand-600 hover:underline">
+              Ver relatório completo
+            </Link>
+          ) : null}
         </div>
 
         {recent.length === 0 ? (
