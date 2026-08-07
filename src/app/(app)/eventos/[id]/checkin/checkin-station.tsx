@@ -129,9 +129,7 @@ export function CheckinStation({
       ? "border-emerald-300 bg-emerald-50"
       : result?.status === "duplicado"
         ? "border-amber-300 bg-amber-50"
-        : result
-          ? "border-red-300 bg-red-50"
-          : "border-slate-200 bg-white";
+        : "border-red-300 bg-red-50";
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -172,34 +170,30 @@ export function CheckinStation({
               setCameraOn((current) => !current);
             }}
           >
-            {cameraOn ? "Desligar câmera" : "Ler próximo crachá"}
+            {cameraOn ? "Desligar câmera" : "Escanear QR-Code"}
           </button>
           {cameraError ? <p className="mt-2 text-xs text-red-600">{cameraError}</p> : null}
         </div>
 
         <div id="leitor-camera" className={classNames("overflow-hidden rounded-lg", cameraOn ? "block" : "hidden")} />
 
-        <div className={classNames("rounded-xl border p-4 transition", tone)}>
-          {result ? (
-            <>
-              <p className="text-sm font-semibold text-slate-900">
-                {result.status === "ok" ? "Presença confirmada" : result.status === "duplicado" ? "Já registrado" : "Não registrado"}
-              </p>
-              {result.participant ? (
-                <>
-                  <p className="mt-1 text-xl font-bold text-slate-900">{result.participant.name}</p>
-                  <p className="text-sm text-slate-600">
-                    {result.participant.qualification}
-                    {result.participant.organization ? ` · ${result.participant.organization}` : ""}
-                  </p>
-                </>
-              ) : null}
-              <p className="mt-1 text-sm text-slate-600">{result.message}</p>
-            </>
-          ) : (
-            <p className="text-sm text-slate-500">Aguardando leitura...</p>
-          )}
-        </div>
+        {result ? (
+          <div className={classNames("rounded-xl border p-4 transition", tone)}>
+            <p className="text-sm font-semibold text-slate-900">
+              {result.status === "ok" ? "Presença confirmada" : result.status === "duplicado" ? "Já registrado" : "Não registrado"}
+            </p>
+            {result.participant ? (
+              <>
+                <p className="mt-1 text-xl font-bold text-slate-900">{result.participant.name}</p>
+                <p className="text-sm text-slate-600">
+                  {result.participant.qualification}
+                  {result.participant.organization ? ` · ${result.participant.organization}` : ""}
+                </p>
+              </>
+            ) : null}
+            <p className="mt-1 text-sm text-slate-600">{result.message}</p>
+          </div>
+        ) : null}
       </section>
 
       <section className="card-pad">
