@@ -16,21 +16,30 @@ const HEADER_ALIASES: Record<string, keyof ImportParticipantRow> = {
   telefone: "phone",
   celular: "phone",
   qualificacao: "qualification",
-  "qualificação": "qualification",
   categoria: "qualification",
   instituicao: "organization",
-  "instituição": "organization",
+  empresa: "organization",
+  "instituicao/empresa": "organization",
+  "instituicao empresa": "organization",
   organizacao: "organization",
-  "organização": "organization",
+  "organizacao/empresa": "organization",
   cargo: "position",
+  funcao: "position",
+  "cargo/funcao": "position",
+  "cargo funcao": "position",
   observacoes: "notes",
-  "observações": "notes",
 };
 
 const BATCH_SIZE = 200;
 
-function normalize(value: unknown) {
-  return String(value ?? "").trim().toLowerCase();
+function normalizeHeader(value: unknown) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s*\/\s*/g, "/")
+    .replace(/\s+/g, " ");
 }
 
 function cellText(value: ExcelJS.CellValue) {
@@ -61,7 +70,7 @@ export function ImportForm({ eventId }: { eventId: string }) {
 
       const headerMap = new Map<number, keyof ImportParticipantRow>();
       worksheet.getRow(1).eachCell((cell, col) => {
-        const mapped = HEADER_ALIASES[normalize(cell.value)];
+        const mapped = HEADER_ALIASES[normalizeHeader(cellText(cell.value))];
         if (mapped) headerMap.set(col, mapped);
       });
 
@@ -115,8 +124,8 @@ export function ImportForm({ eventId }: { eventId: string }) {
     <div className="card-pad space-y-4">
       <p className="text-sm text-slate-600">
         Envie uma planilha Excel (.xlsx). As colunas obrigatórias são <strong>Nome</strong> e{" "}
-        <strong>Documento</strong>. Também são aceitas: E-mail, Telefone, Qualificação, Instituição,
-        Cargo e Observações.
+        <strong>Documento</strong>. Também são aceitas: E-mail, Telefone, Qualificação, Instituição / empresa,
+        Cargo / função e Observações. O código de credenciamento e o QR Code são gerados pelo sistema após a importação.
       </p>
 
       <a href={`/api/eventos/${eventId}/participantes/modelo`} className="btn-secondary btn-sm">
