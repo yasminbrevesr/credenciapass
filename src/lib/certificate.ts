@@ -218,8 +218,8 @@ export async function drawCertificatePage(pdf: PDFDocument, data: CertificateDat
   const { width, height } = page.getSize();
 
   const regular = await pdf.embedFont(StandardFonts.TimesRoman);
-  const bold = await pdf.embedFont(StandardFonts.TimesBold);
-  const italic = await pdf.embedFont(StandardFonts.TimesItalic);
+  const bold = await pdf.embedFont(StandardFonts.TimesRomanBold);
+  const italic = await pdf.embedFont(StandardFonts.TimesRomanItalic);
 
   const paper = rgb(0.985, 0.982, 0.975);
   const white = rgb(1, 1, 1);
