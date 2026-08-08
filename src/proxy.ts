@@ -2,8 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { SESSION_COOKIE } from "@/lib/session-cookie";
 
-/** Rotas acessíveis sem login (a validação pública de certificado é uma delas). */
-const PUBLIC_PREFIXES = ["/validar", "/_next", "/favicon.ico"];
+/** Rotas acessíveis sem login. */
+const PUBLIC_PREFIXES = ["/validar", "/inscricao", "/_next", "/favicon.ico"];
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
