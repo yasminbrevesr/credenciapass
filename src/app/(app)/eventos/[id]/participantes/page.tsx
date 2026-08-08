@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { parseQualifications } from "@/lib/utils";
 
 import { ParticipantsTable } from "./participants-table";
+import { RegistrationLinkButton } from "./registration-link-button";
 
 const PAGE_SIZE = 50;
 
@@ -78,6 +79,7 @@ export default async function ParticipantsPage(props: PageProps<"/eventos/[id]/p
           </Link>
           {user.role === "ADMIN" ? (
             <>
+              <RegistrationLinkButton eventId={id} />
               <a href={`/api/eventos/${id}/relatorios/inscritos`} className="btn-secondary btn-sm">
                 Exportar Excel
               </a>
