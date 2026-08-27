@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-import logoImage from "../../public/Logo Amarelo  (1).jpg";
+import logoImage from "../../public/brevescorp-mark.svg";
 import { classNames } from "@/lib/utils";
 
 export function Logo({
@@ -22,16 +22,16 @@ export function Logo({
       <span
         className={classNames(
           frameClass,
-          "relative shrink-0 overflow-hidden rounded-[10px] border border-white/60 bg-white shadow-sm",
+          "relative shrink-0 overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-sm",
         )}
       >
         <Image
           src={logoImage}
-          alt="CredenciaPass"
+          alt="Breves Corp"
           fill
           sizes={imageSize}
           priority={size === "lg"}
-          className="scale-[1.75] object-cover"
+          className="object-contain p-1"
         />
       </span>
 
